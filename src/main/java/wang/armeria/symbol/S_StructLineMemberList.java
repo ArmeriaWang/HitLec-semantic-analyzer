@@ -9,12 +9,13 @@ import java.util.List;
 public class S_StructLineMemberList implements Symbol, HasStructType, HasVarType {
 
     private final StructType structType;  // I
-    private Type varType;  // I - brother
+    private final Type varType;  // I - brother
     private final List<Type> typeList = new ArrayList<>();  // S
     private final List<String> idList = new ArrayList<>();  // S
 
-    public S_StructLineMemberList(StructType structType) {
+    public S_StructLineMemberList(StructType structType, Type varType) {
         this.structType = structType;
+        this.varType = varType;
     }
 
     public void addTypeId(Type type, String id) {

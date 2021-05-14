@@ -2,7 +2,6 @@ package wang.armeria.symbol;
 
 import wang.armeria.type.Type;
 import wang.armeria.whkas.IdentifierTable;
-import wang.armeria.whkas.IdentifierTable.Entry;
 
 public class S_FuncParam implements Symbol, HasIdTable{
 

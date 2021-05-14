@@ -1,63 +1,40 @@
 package wang.armeria.type;
 
+import wang.armeria.whkas.Entry;
+
 import java.util.*;
 
 public class StructType extends Type {
 
-    public static class Member {
-        private final Type type;
-        private final String id;
-
-        public Member(Type type, String id) {
-            this.type = type;
-            this.id = id;
-        }
-
-        public Type getType() {
-            return type;
-        }
-
-        public String getId() {
-            return id;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            Member member = (Member) o;
-            return Objects.equals(id, member.id);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(id);
+    public static class Member extends Entry {
+        protected Member(Type type, String id, int offset) {
+            super(type, id, offset);
         }
     }
 
     private static final Map<String, StructType> id2Struct = new HashMap<>();
     private String structName;
     private final List<Member> memberList = new ArrayList<>();
+    private int offset;
 
     public StructType() {
         super(TypeName.STRUCT);
+        offset = 0;
     }
 
     public Member addMember(Type type, String id) {
-        Member member = new Member(type, id);
-        if (addMember(member)) {
-            return member;
-        } else {
-            return null;
+        for (Member member : memberList) {
+            if (member.getId().equals(id)) {
+                return null;
+            }
         }
-    }
-
-    public boolean addMember(Member member) {
-        if (memberList.contains(member)) {
-            return false;
-        }
+        Member member = new Member(type, id, offset);
         memberList.add(member);
-        return true;
+        offset += member.getWidth();
+        while (offset % 4 > 0) {
+            offset++;
+        }
+        return member;
     }
 
     public String getStructName() {
@@ -110,4 +87,20 @@ public class StructType extends Type {
     public static StructType getStructTypeByName(String structName) {
         return id2Struct.getOrDefault(structName, null);
     }
+
+    public static void printStructTypeTable() {
+        System.out.println("\nStruct Type Table");
+        for (StructType structType : id2Struct.values()) {
+            structType.printStructType();
+            System.out.println();
+        }
+    }
+
+    public void printStructType() {
+        System.out.printf("struct %s\n", structName);
+        for (Member member : memberList) {
+            System.out.printf("%-10s\t%-20s\n", member.getId(), member.getType());
+        }
+    }
+
 }
