@@ -21,6 +21,7 @@ public class ASTreeNode {
     private final int producer;
     private ASTreeNode father;
     private Symbol symbol = null;
+    private final int sonRank;
 
     /**
      * 新建AST节点
@@ -29,13 +30,19 @@ public class ASTreeNode {
      * @param value 符号语义值
      * @param producer 产生式编号（终结符为-1）
      */
-    public ASTreeNode(SymbolKind symbolKind, Position position, Object value, List<ASTreeNode> children, int producer) {
+    public ASTreeNode(SymbolKind symbolKind, Position position, Object value, List<ASTreeNode> children,
+                      int producer, int sonRank) {
         this.symbolKind = symbolKind;
         this.position = position;
         this.value = value;
         this.producer = producer;
+        this.sonRank = sonRank;
         setChildren(children);
         father = null;
+    }
+
+    public int getSonRank() {
+        return sonRank;
     }
 
     /**
@@ -144,12 +151,13 @@ public class ASTreeNode {
         Position position = Position.parsePosition(domNode.getChildNodes().item(1).getTextContent());
         Object value = domNode.getChildNodes().item(2).getTextContent();
         int producer = Integer.parseInt(domNode.getChildNodes().item(3).getTextContent());
-        NodeList domChildren = domNode.getChildNodes().item(4).getChildNodes();
+        int sonRank = Integer.parseInt(domNode.getChildNodes().item(4).getTextContent());
+        NodeList domChildren = domNode.getChildNodes().item(5).getChildNodes();
         List<ASTreeNode> children = new ArrayList<>();
         for (int i = 0; i < domChildren.getLength(); i++) {
             Node domChild = domChildren.item(i);
             children.add(parseASTreeNode(domChild));
         }
-        return new ASTreeNode(symbolKind, position, value, children, producer);
+        return new ASTreeNode(symbolKind, position, value, children, producer, sonRank);
     }
 }

@@ -57,7 +57,7 @@ public enum SymbolKind {
     S_EXP_R(53),                   /* EXP_R  */
     S_EXP_L(54),                   /* EXP_L  */
     S_HD_ARRAY(55),                /* HD_ARRAY  */
-    S_MORE_ARRAY_DIM(56),          /* MORE_ARRAY_DIM  */
+    S_STATEMENT_EXP_R(56),          /* MORE_ARRAY_DIM  */
     S_NUMBER(57),                  /* NUMBER  */
     S_STATEMENT_IF(58),            /* STATEMENT_IF  */
     S_STATEMENT_ELSE(59),          /* STATEMENT_ELSE  */
@@ -153,7 +153,7 @@ public enum SymbolKind {
             SymbolKind.S_EXP_R,
             SymbolKind.S_EXP_L,
             SymbolKind.S_HD_ARRAY,
-            SymbolKind.S_MORE_ARRAY_DIM,
+            SymbolKind.S_STATEMENT_EXP_R,
             SymbolKind.S_NUMBER,
             SymbolKind.S_STATEMENT_IF,
             SymbolKind.S_STATEMENT_ELSE,

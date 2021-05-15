@@ -15,9 +15,14 @@ public class ArrayRefEntry extends Entry {
         this.regId = regId;
     }
 
-    public static ArrayRefEntry getArrayRefEntry(IdentifierTable identifierTable,
-                                        String id, List<Integer> indexRegList) {
-        Entry entry = identifierTable.getEntryById(id);
+    /**
+     * 将高维数组的原表条目转化为引用条目，并自动生成计算索引的中间代码
+     *
+     * @param entry 高维数组的原表条目
+     * @param indexRegList 存储各维度索引值的寄存器的列表
+     * @return 该高维数组的引用条目；若引用维度数和定义维度数不匹配，返回null
+     */
+    public static ArrayRefEntry getArrayRefEntry(Entry entry, List<Integer> indexRegList) {
         Type type = entry.getType();
         if (type.getTypeName() != Type.TypeName.ARRAY || indexRegList.size() < 1) {
             return null;
@@ -46,11 +51,15 @@ public class ArrayRefEntry extends Entry {
         if (type.getTypeName() == Type.TypeName.ARRAY) {
             return null;
         }
-        return new ArrayRefEntry(entry.getType(), entry.getId(), entry.getOffset(), addResReg);
+        return new ArrayRefEntry(type, entry.getId(), entry.getOffset(), addResReg);
     }
 
     public String getFullRef() {
         return getId() + "[" + Manager.reg2String(regId) + "]";
+    }
+
+    public String getFullRef(boolean needId) {
+        return (needId ? getId() : "") + "[" + Manager.reg2String(regId) + "]";
     }
 
     public int getRegId() {

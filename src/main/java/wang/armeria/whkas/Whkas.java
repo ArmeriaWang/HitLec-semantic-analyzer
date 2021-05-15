@@ -29,17 +29,87 @@ public class Whkas {
         if (!child0.isArithmetic() || !child2.isArithmetic()) {
             return false;
         }
-        if (!child0.getType().equals(child2.getType())) {
-            return false;
+        S_ExpR_Ari child0_ari = (S_ExpR_Ari) child0;
+        S_ExpR_Ari child2_ari = (S_ExpR_Ari) child2;
+        if (!child0_ari.getType().equals(child2_ari.getType())) {
+            if (child0_ari.getType().getTypeName() == Type.TypeName.INTEGER
+                    && child2_ari.getType().getTypeName() == Type.TypeName.FLOAT) {
+                child0_ari.setType(new FloatType());
+            } else if (child0_ari.getType().getTypeName() == Type.TypeName.FLOAT
+                    && child2_ari.getType().getTypeName() == Type.TypeName.INTEGER) {
+                child2_ari.setType(new FloatType());
+            } else {
+                return false;
+            }
         }
         S_ExpR_Ari symbol = (S_ExpR_Ari) node.getSymbol();
         symbol.setType(child0.getType());
-        int reg1 = ((S_ExpR_Ari) child0).getRegId();
-        int reg2 = ((S_ExpR_Ari) child2).getRegId();
-        int reg3 = ((S_ExpR_Ari) node.getSymbol()).getRegId();
+        if (child0_ari.getValue() != null && child2_ari.getValue() != null) {
+            Number opValue = child0_ari.doArithmeticCalWith(child2_ari, op);
+            if (opValue == null) {
+                reportSemanticError("Divide or mod by zero!");
+                return false;
+            }
+            symbol.setValue(opValue);
+        }
+        int reg1 = child0_ari.getRegId();
+        int reg2 = child2_ari.getRegId();
+        int reg3 = symbol.getRegId();
         Manager.addTetrad(op, Manager.reg2String(reg1),
                 Manager.reg2String(reg2),
                 Manager.reg2String(reg3));
+        return true;
+    }
+
+    private boolean doPostWithRelOpExpR(ASTreeNode node, String op) {
+        S_ExpR child0 = (S_ExpR) node.childAt(0).getSymbol();
+        S_ExpR child2 = (S_ExpR) node.childAt(2).getSymbol();
+        if (!child0.isArithmetic() || !child2.isArithmetic()) {
+            return false;
+        }
+        S_ExpR_Log symbol = (S_ExpR_Log) node.getSymbol();
+        int reg1 = ((S_ExpR_Ari) child0).getRegId();
+        int reg2 = ((S_ExpR_Ari) child2).getRegId();
+        Manager.addTetrad("j" + op, Manager.reg2String(reg1), Manager.reg2String(reg2), symbol.getGoTrueLabel());
+        Manager.addTetrad("j", "/#/", "/#/", symbol.getGoFalseLabel());
+        return true;
+    }
+
+    private boolean doPreWithExpRLog(ASTreeNode node) {
+        S_ExpR_Log symbol = new S_ExpR_Log(getIdTableOfFather(node));
+        if (node.getFather().getProducer() == 29) {
+            // EXP_R -> EXP_R LOR EXP_R
+            S_ExpR_Log fatherSymbol = (S_ExpR_Log) node.getFather().getSymbol();
+            if (node.getSonRank() == 0) {
+                symbol.inherentGoTrueLabel(fatherSymbol.getGoTrueLabel());
+            } else if (node.getSonRank() == 2) {
+                S_ExpR_Log brother0 = (S_ExpR_Log) node.getFather().childAt(0).getSymbol();
+                brother0.setGoFalseLabel(Manager.nextLabel());
+                symbol.inherentGoTrueLabel(fatherSymbol.getGoTrueLabel());
+                symbol.inherentGoFalseLabel(fatherSymbol.getGoFalseLabel());
+            }
+        } else if (node.getFather().getProducer() == 30) {
+            // EXP_R -> EXP_R LAND EXP_R
+            S_ExpR_Log fatherSymbol = (S_ExpR_Log) node.getFather().getSymbol();
+            if (node.getSonRank() == 0) {
+                symbol.inherentGoFalseLabel(fatherSymbol.getGoFalseLabel());
+            } else if (node.getSonRank() == 2) {
+                S_ExpR_Log brother0 = (S_ExpR_Log) node.getFather().childAt(0).getSymbol();
+                brother0.setGoTrueLabel(Manager.nextLabel());
+                symbol.inherentGoTrueLabel(fatherSymbol.getGoTrueLabel());
+                symbol.inherentGoFalseLabel(fatherSymbol.getGoFalseLabel());
+            }
+        } else if (node.getFather().getProducer() == 31) {
+            // EXP_R -> NOT EXP_R
+            S_ExpR_Log fatherSymbol = (S_ExpR_Log) node.getFather().getSymbol();
+            symbol.inherentGoTrueLabel(fatherSymbol.getGoTrueLabel());
+            symbol.inherentGoFalseLabel(fatherSymbol.getGoFalseLabel());
+        } else if (node.getFather().getProducer() == 57) {
+            // STATEMENT_WHILE: WHILE ROUND_LEFT {?} EXP_R ROUND_RIGHT WHILE_BODY
+            S_StatementWhile fatherSymbol = (S_StatementWhile) node.getFather().getSymbol();
+            symbol.inherentGoFalseLabel(fatherSymbol.getNextLabel());
+        }
+        node.setSymbol(symbol);
         return true;
     }
 
@@ -48,14 +118,14 @@ public class Whkas {
             case -1:   // Terminal
                 return true;
             case 14:   // STATEMENT -> STATEMENT_STRUCT_DEF
-            case 49:   // MORE_ARRAY_DIM -> PLACEHOLDER
             case 51:   // NUMBER -> CONST_BOOLEAN
             case 59:   // WHILE_BODY -> STATEMENT
             case 60:   // STATEMENT_VAR_DEF -> VAR_DEF_TYPE DECLARE_INITIALIZE DECLARE_MORE
             case 63:   // DECLARE_MORE -> COMMA DECLARE_INITIALIZE DECLARE_MORE
             case 69:   // DECLARE_INITIALIZE -> ID ASSIGN EXP_R
             case 70:   // DECLARE_INITIALIZE -> STAR ID ASSIGN EXP_R
-            case 95:   // VAR_DEF_TYPE -> DT_BOOLEAN
+            case 89:   // RECV_HD_ARRAY -> ID SQUARE_LEFT SQUARE_RIGHT MORE_ARRAY_DIM
+            case 90:   // RECV_HD_ARRAY -> ID SQUARE_LEFT EXP_R SQUARE_RIGHT MORE_ARRAY_DIM            case 95:   // VAR_DEF_TYPE -> DT_BOOLEAN
             case 99:   // FUNC_DEF_TYPE -> DT_BOOLEAN
                 reportSemanticError(String.format("Unsupported producer %s!", node.getProducer()));
                 return false;
@@ -84,7 +154,7 @@ public class Whkas {
                 } else if (node.getFather().getProducer() == 54) {
                     // STATEMENT_ELSE -> ELSE {?} STATEMENTS_BLOCK
                     S_AnyStatement fatherSymbol = (S_AnyStatement) node.getFather().getSymbol();
-                    Manager.addTetrad("j", "/*/", "/*/", fatherSymbol.getNextLabel());
+                    Manager.addTetrad("j", "/#/", "/#/", fatherSymbol.getNextLabel());
                     S_ExpR_Log uncle2 = (S_ExpR_Log) node.getFather().getFather().childAt(2).getSymbol();
                     uncle2.setGoFalseLabel(Manager.nextLabel());
                     symbol.inherentNextLabel(fatherSymbol.getNextLabel());
@@ -94,6 +164,26 @@ public class Whkas {
                     S_ExpR_Log uncle2 = (S_ExpR_Log) node.getFather().getFather().childAt(2).getSymbol();
                     uncle2.setGoTrueLabel(Manager.nextLabel());
                     symbol.inherentNextLabel(grandpaSymbol.getStartLabel());
+                } else if (node.getFather().getProducer() == 83) {
+                    // STATEMENT_FUNC_DEF -> FUNCTION FUNC_DEF_TYPE ID ROUND_LEFT ROUND_RIGHT {?} STATEMENTS_BLOCK
+                    S_StatementFuncDef fatherSymbol = (S_StatementFuncDef) node.getFather().getSymbol();
+                    S_AnyType brother1 = (S_AnyType) node.getFather().childAt(1).getSymbol();
+                    fatherSymbol.setFunctionType(new FunctionType(List.of(), brother1.getType()));
+                    String functionId = node.getFather().childAt(2).getValue().toString();
+                    IdentifierTable.getGlobalTable().addEntry(fatherSymbol.getFunctionType(), functionId);
+                    fatherSymbol.getIdentifierTable().setFunctionId(functionId);
+                } else if (node.getFather().getProducer() == 84) {
+                    // STATEMENT_FUNC_DEF -> FUNCTION FUNC_DEF_TYPE ID ...  {?} STATEMENTS_BLOCK
+                    S_StatementFuncDef fatherSymbol = (S_StatementFuncDef) node.getFather().getSymbol();
+                    S_AnyType brother1 = (S_AnyType) node.getFather().childAt(1).getSymbol();
+                    S_FuncParamDef brother4 = (S_FuncParamDef) node.getFather().childAt(4).getSymbol();
+                    S_FuncParamDefList brother5 = (S_FuncParamDefList) node.getFather().childAt(5).getSymbol();
+                    List<Type> typeList = new ArrayList<>(brother5.getTypeList());
+                    typeList.add(brother4.getType());
+                    fatherSymbol.setFunctionType(new FunctionType(typeList, brother1.getType()));
+                    String functionId = node.getFather().childAt(2).getValue().toString();
+                    IdentifierTable.getGlobalTable().addEntry(fatherSymbol.getFunctionType(), functionId);
+                    fatherSymbol.getIdentifierTable().setFunctionId(functionId);
                 }
                 break;
             }
@@ -106,7 +196,7 @@ public class Whkas {
             case 12:   // STATEMENT -> STATEMENT_IF
             case 13:   // STATEMENT -> STATEMENT_WHILE
             case 15:   // STATEMENT -> STATEMENT_RETURN
-            case 16:   // STATEMENT -> EXP_R SEMICOLON
+            case 16:   // STATEMENT -> STATEMENT_EXP_R
             case 17:   // STATEMENT -> SEMICOLON
                 node.setSymbol(new S_AnyStatement(getIdTableOfFather(node)));
                 break;
@@ -117,13 +207,7 @@ public class Whkas {
             case 22:   // EXP_R -> EXP_R NE EXP_R
             case 23:   // EXP_R -> EXP_R EQ EXP_R
             {
-                S_ExpR_Log symbol = new S_ExpR_Log(getIdTableOfFather(node));
-                node.setSymbol(symbol);
-                if (node.getFather().getProducer() == 57) {
-                    // STATEMENT_WHILE: WHILE ROUND_LEFT {?} EXP_R ROUND_RIGHT WHILE_BODY
-                    S_StatementWhile fatherSymbol = (S_StatementWhile) node.getFather().getSymbol();
-                    symbol.inherentGoFalseLabel(fatherSymbol.getNextLabel());
-                }
+                doPreWithExpRLog(node);
                 break;
             }
             case 24:   // EXP_R -> EXP_R PLUS EXP_R
@@ -133,16 +217,22 @@ public class Whkas {
             case 28:   // EXP_R -> EXP_R MOD EXP_R
                 node.setSymbol(new S_ExpR_Ari(getIdTableOfFather(node)));
                 break;
-            case 36:   // EXP_R -> ROUND_LEFT EXP_R ROUND_RIGHT
-                node.setSymbol(new S_ExpR(getIdTableOfFather(node)));
+            case 29:   // EXP_R -> EXP_R LOR EXP_R
+            case 30:   // EXP_R -> EXP_R LAND EXP_R
+            case 31:   // EXP_R -> LNOT EXP_R
+                doPreWithExpRLog(node);
                 break;
-            case 37:   // EXP_R -> EXP_L
-            case 38:   // EXP_R -> APSAND EXP_L
-            case 39:   // EXP_R -> STAR EXP_L
-                node.setSymbol(new S_ExpR_Ari(getIdTableOfFather(node)));
+            case 37:   // EXP_R -> ROUND_LEFT EXP_R ROUND_RIGHT
+            {
+                int faProducer = node.getFather().getProducer();
+                if (faProducer == 29 || faProducer == 30 || faProducer == 31) {
+                    doPreWithExpRLog(node);
+                } else {
+                    node.setSymbol(new S_ExpR_Ari(getIdTableOfFather(node)));
+                }
                 break;
-            case 40:   // EXP_R -> CONST_STRING
-                break;
+            }
+            case 38:   // EXP_R -> EXP_L
             case 41:   // EXP_R -> NUMBER
             case 42:   // EXP_R -> FUNC_CALL
                 node.setSymbol(new S_ExpR_Ari(getIdTableOfFather(node)));
@@ -167,6 +257,9 @@ public class Whkas {
                 }
                 break;
             }
+            case 49:   // STATEMENT_EXP_R -> EXP_R SEMICOLON
+                node.setSymbol(new S_AnyStatement(getIdTableOfFather(node)));
+                break;
             case 50:   // NUMBER -> CONST_INTEGER
             case 52:   // NUMBER -> CONST_FLOAT
                 break;
@@ -226,7 +319,9 @@ public class Whkas {
                     } else {  // father is DECLARE_MORE_NON_INITIALIZE
                         varType = ((HasVarType) node.getFather().getSymbol()).getVarType();
                     }
-                    node.setSymbol(new S_StructSingleMember(fatherSymbol.getStructType(), varType));
+                    node.setSymbol(new S_StructSingleMember(
+                            getIdTableOfFather(node),
+                            fatherSymbol.getStructType(), varType));
                 } else if (node.getFather().getSymbol() instanceof HasIdTable) {
                     HasIdTable fatherSymbol = (HasIdTable) node.getFather().getSymbol();
                     Type varType;
@@ -249,7 +344,8 @@ public class Whkas {
             case 74:   // MORE_STRUCT_MEMBER_DEF -> %empty
             case 75:   // STRUCT_MEMBER_DEF -> VAR_DEF_TYPE DECLARE_NON_INITIALIZE DECLARE_MORE_NON_INITIALIZE SEMICOLON
             {
-                node.setSymbol(new S_AnyStructMemberDef(getStructTypeOfFather(node)));
+                node.setSymbol(new S_AnyStructMemberDef(getIdTableOfFather(node),
+                        getStructTypeOfFather(node)));
                 break;
             }
             case 76:   // DECLARE_MORE_NON_INITIALIZE -> COMMA DECLARE_NON_INITIALIZE DECLARE_MORE_NON_INITIALIZE
@@ -259,11 +355,13 @@ public class Whkas {
                 if (node.getFather().getProducer() == 75) {  // VAR_DEF_TYPE DECLARE_NON_INITIALIZE DECLARE_MORE_NON_INITIALIZE ...
                     Symbol brother0 = node.getFather().childAt(0).getSymbol();
                     S_StructLineMemberList symbol = new S_StructLineMemberList(
+                            getIdTableOfFather(node),
                             ((HasStructType) fatherSymbol).getStructType(),
                             ((S_AnyType) brother0).getType());
                     node.setSymbol(symbol);
                 } else {  // father is DECLARE_MORE_NON_INITIALIZE
                     S_StructLineMemberList symbol = new S_StructLineMemberList(
+                            getIdTableOfFather(node),
                             ((HasStructType) fatherSymbol).getStructType(),
                             ((HasVarType) fatherSymbol).getVarType());
                     node.setSymbol(symbol);
@@ -275,17 +373,25 @@ public class Whkas {
                 node.setSymbol(new S_AnyStatement(getIdTableOfFather(node)));
                 break;
             }
+            case 79:   // FUNC_CALL -> ID ROUND_LEFT EXP_R SEND_FUNC_ARGS ROUND_RIGHT
+            case 80:   // FUNC_CALL -> ID ROUND_LEFT ROUND_RIGHT
+                node.setSymbol(new S_FuncCall(getIdTableOfFather(node)));
+                break;
+            case 81:   // SEND_FUNC_ARGS -> COMMA EXP_R SEND_FUNC_ARGS
+            case 82:   // SEND_FUNC_ARGS -> %empty
+                node.setSymbol(new S_FuncParamCallList(getIdTableOfFather(node)));
+                break;
             case 83:   // STATEMENT_FUNC_DEF -> FUNCTION FUNC_DEF_TYPE ID ROUND_LEFT ROUND_RIGHT STATEMENTS_BLOCK
             case 84:   // STATEMENT_FUNC_DEF -> FUNCTION FUNC_DEF_TYPE ID ROUND_LEFT SINGLE_RECV_FUNC_ARG RECV_FUNC_ARGS ROUND_RIGHT STATEMENTS_BLOCK
                 node.setSymbol(new S_StatementFuncDef());
                 break;
             case 85:   // RECV_FUNC_ARGS -> COMMA SINGLE_RECV_FUNC_ARG RECV_FUNC_ARGS
             case 86:   // RECV_FUNC_ARGS -> %empty
-                node.setSymbol(new S_FuncParamList(getIdTableOfFather(node)));
+                node.setSymbol(new S_FuncParamDefList(getIdTableOfFather(node)));
                 break;
             case 87:   // SINGLE_RECV_FUNC_ARG -> FUNC_DEF_TYPE ID
             case 88:   // SINGLE_RECV_FUNC_ARG -> FUNC_DEF_TYPE RECV_HD_ARRAY
-                node.setSymbol(new S_FuncParam(getIdTableOfFather(node)));
+                node.setSymbol(new S_FuncParamDef(getIdTableOfFather(node)));
                 break;
             case 91:   // DT_STRUCT -> STRUCT ID
             case 92:   // DT_POINTER -> VAR_DEF_TYPE STAR
@@ -312,13 +418,14 @@ public class Whkas {
             case -1:   // Terminal
                 return true;
             case 14:   // STATEMENT -> STATEMENT_STRUCT_DEF
-            case 49:   // MORE_ARRAY_DIM -> PLACEHOLDER
             case 51:   // NUMBER -> CONST_BOOLEAN
             case 59:   // WHILE_BODY -> STATEMENT
             case 60:   // STATEMENT_VAR_DEF -> VAR_DEF_TYPE DECLARE_INITIALIZE DECLARE_MORE
             case 63:   // DECLARE_MORE -> COMMA DECLARE_INITIALIZE DECLARE_MORE
             case 69:   // DECLARE_INITIALIZE -> ID ASSIGN EXP_R
             case 70:   // DECLARE_INITIALIZE -> STAR ID ASSIGN EXP_R
+            case 89:   // RECV_HD_ARRAY -> ID SQUARE_LEFT SQUARE_RIGHT MORE_ARRAY_DIM
+            case 90:   // RECV_HD_ARRAY -> ID SQUARE_LEFT EXP_R SQUARE_RIGHT MORE_ARRAY_DIM
             case 95:   // VAR_DEF_TYPE -> DT_BOOLEAN
             case 99:   // FUNC_DEF_TYPE -> DT_BOOLEAN
                 reportSemanticError(String.format("Unsupported producer %s!", node.getProducer()));
@@ -357,7 +464,7 @@ public class Whkas {
             case 12:   // STATEMENT -> STATEMENT_IF
             case 13:   // STATEMENT -> STATEMENT_WHILE
             case 15:   // STATEMENT -> STATEMENT_RETURN
-            case 16:   // STATEMENT -> EXP_R SEMICOLON
+            case 16:   // STATEMENT -> STATEMENT_EXP_R
             {
                 S_AnyStatement symbol = (S_AnyStatement) node.getSymbol();
                 S_AnyStatement child0 = (S_AnyStatement) node.childAt(0).getSymbol();
@@ -367,29 +474,51 @@ public class Whkas {
             case 17:   // STATEMENT -> SEMICOLON
                 break;
             case 18:   // EXP_R -> EXP_R LT EXP_R
+            {
+                if (!doPostWithRelOpExpR(node, "<")) {
+                    reportSemanticError("Expression next to the relative op < is not arithmetic!");
+                    return false;
+                }
+                break;
+            }
             case 19:   // EXP_R -> EXP_R LE EXP_R
             {
-                S_ExpR_Log symbol = (S_ExpR_Log) node.getSymbol();
-                S_ExpR_Ari child0 = (S_ExpR_Ari) node.childAt(0).getSymbol();
-                S_ExpR_Ari child2 = (S_ExpR_Ari) node.childAt(2).getSymbol();
-                int reg1 = child0.getRegId();
-                int reg2 = child2.getRegId();
-                Manager.addTetrad("j<=", Manager.reg2String(reg1), Manager.reg2String(reg2), symbol.getGoTrue());
-                Manager.addTetrad("j", "/*/", "/*/", symbol.getGoFalse());
+                if (!doPostWithRelOpExpR(node, "<=")) {
+                    reportSemanticError("Expression next to the relative op <= is not arithmetic!");
+                    return false;
+                }
                 break;
             }
             case 20:   // EXP_R -> EXP_R GT EXP_R
+            {
+                if (!doPostWithRelOpExpR(node, ">")) {
+                    reportSemanticError("Expression next to the relative op > is not arithmetic!");
+                    return false;
+                }
+                break;
+            }
             case 21:   // EXP_R -> EXP_R GE EXP_R
+            {
+                if (!doPostWithRelOpExpR(node, ">=")) {
+                    reportSemanticError("Expression next to the relative op >= is not arithmetic!");
+                    return false;
+                }
+                break;
+            }
             case 22:   // EXP_R -> EXP_R NE EXP_R
+            {
+                if (!doPostWithRelOpExpR(node, "!=")) {
+                    reportSemanticError("Expression next to the relative op != is not arithmetic!");
+                    return false;
+                }
+                break;
+            }
             case 23:   // EXP_R -> EXP_R EQ EXP_R
             {
-                S_ExpR_Log symbol = (S_ExpR_Log) node.getSymbol();
-                S_ExpR_Ari child0 = (S_ExpR_Ari) node.childAt(0).getSymbol();
-                S_ExpR_Ari child2 = (S_ExpR_Ari) node.childAt(2).getSymbol();
-                int reg1 = child0.getRegId();
-                int reg2 = child2.getRegId();
-                Manager.addTetrad("j==", Manager.reg2String(reg1), Manager.reg2String(reg2), symbol.getGoTrue());
-                Manager.addTetrad("j", "/*/", "/*/", symbol.getGoFalse());
+                if (!doPostWithRelOpExpR(node, "==")) {
+                    reportSemanticError("Expression next to the relative op == is not arithmetic!");
+                    return false;
+                }
                 break;
             }
             case 24:   // EXP_R -> EXP_R PLUS EXP_R
@@ -432,35 +561,44 @@ public class Whkas {
                 }
                 break;
             }
-            case 36:   // EXP_R -> ROUND_LEFT EXP_R ROUND_RIGHT
+            case 29:   // EXP_R -> EXP_R LOR EXP_R
+            {
+                S_ExpR child0 = (S_ExpR) node.childAt(0).getSymbol();
+                S_ExpR child2 = (S_ExpR) node.childAt(1).getSymbol();
+                if (!child0.isLogical() || !child2.isLogical()) {
+                    reportSemanticError("Logical operation should use logical expression!");
+                }
+                S_ExpR_Log child0_log = (S_ExpR_Log) child0;
+                S_ExpR_Log child2_log = (S_ExpR_Log) child2;
+
+
+            }
+            case 30:   // EXP_R -> EXP_R LAND EXP_R
+
+            case 31:   // EXP_R -> LNOT EXP_R
+                break;
+            case 37:   // EXP_R -> ROUND_LEFT EXP_R ROUND_RIGHT
             {
                 S_ExpR child1 = (S_ExpR) node.getFather().childAt(1).getSymbol();
-                if (child1.isLogical()) {
-
-                } else if (child1.isArithmetic()) {
+                if (child1.isArithmetic()) {
                     S_ExpR_Ari child1_ari = (S_ExpR_Ari) node.getFather().childAt(1).getSymbol();
                     S_ExpR_Ari symbol_ari = (S_ExpR_Ari) node.getSymbol();
                     node.setSymbol(symbol_ari, true);
                     symbol_ari.setType(child1.getType());
-                    Manager.addTetrad("=", Manager.reg2String(child1_ari.getRegId()), "/*/",
+                    Manager.addTetrad("=", Manager.reg2String(child1_ari.getRegId()), "/#/",
                             Manager.reg2String(symbol_ari.getRegId()));
-                } else {
-
                 }
                 break;
             }
-            case 37:   // EXP_R -> EXP_L
+            case 38:   // EXP_R -> EXP_L
             {
                 S_ExpR_Ari symbol = (S_ExpR_Ari) node.getSymbol();
                 S_ExpL child0 = (S_ExpL) node.childAt(0).getSymbol();
                 int regId = symbol.getRegId();
                 symbol.setType(child0.getEntry().getType());
-                Manager.addTetrad("=", child0.getFullRef(), "/*/", Manager.reg2String(regId));
-            }
-            case 38:   // EXP_R -> APSAND EXP_L
-            case 39:   // EXP_R -> STAR EXP_L
-            case 40:   // EXP_R -> CONST_STRING
+                Manager.addTetrad("=", child0.getFullRef(), "/#/", Manager.reg2String(regId));
                 break;
+            }
             case 41:   // EXP_R -> NUMBER
             {
                 S_ExpR_Ari symbol = (S_ExpR_Ari) node.getSymbol();
@@ -468,11 +606,19 @@ public class Whkas {
                 int regId = symbol.getRegId();
                 symbol.setType(child0.getType());
                 symbol.setValue(child0.getValue());
-                Manager.addTetrad("=", child0.getValue().toString(), "/*/", Manager.reg2String(regId));
+                Manager.addTetrad("=", child0.getValue().toString(), "/#/", Manager.reg2String(regId));
                 break;
             }
             case 42:   // EXP_R -> FUNC_CALL
+            {
+                S_ExpR_Ari symbol = (S_ExpR_Ari) node.getSymbol();
+                S_FuncCall child0 = (S_FuncCall) node.childAt(0).getSymbol();
+                symbol.setType(child0.getIdentifierTable().getReturnType());
+                int regId = symbol.getRegId();
+                Manager.addTetrad("=", Manager.reg2String(child0.getRegId()), "/#/",
+                        Manager.reg2String(regId));
                 break;
+            }
             case 43:   // EXP_L -> ID
             {
                 S_ExpL symbol = (S_ExpL) node.getSymbol();
@@ -492,34 +638,58 @@ public class Whkas {
                 S_ExpL child0 = (S_ExpL) node.childAt(0).getSymbol();
                 Entry leftEntry = child0.getEntry();
                 String rightId = node.childAt(2).getValue().toString();
-                Entry memberEntry = symbol.getIdentifierTable().getStructMemberEntry(leftEntry, rightId);
-                if (memberEntry == null) {
+                MemberRefEntry memberRefEntry = symbol.getIdentifierTable().getStructMemberEntry(leftEntry, rightId);
+                if (memberRefEntry == null) {
                     reportSemanticError(String.format("Struct member %s of %s not defined!", rightId, leftEntry.getId()));
                     return false;
                 }
-                symbol.setFullRef(child0.getFullRef() + "." + rightId);
-                symbol.setEntry(memberEntry);
+                symbol.setFullRef(child0.getFullRef() + "." + memberRefEntry.getFullRef());
+                symbol.setEntry(memberRefEntry);
                 break;
             }
             case 45:   // EXP_L -> HD_ARRAY
             {
                 S_ExpL symbol = (S_ExpL) node.getSymbol();
                 S_HDArray_Ref child0 = (S_HDArray_Ref) node.childAt(0).getSymbol();
-                ArrayRefEntry entry = ArrayRefEntry.getArrayRefEntry(
-                        symbol.getIdentifierTable(),
-                        child0.getId(),
-                        child0.getIndexRegList());
+                Entry entry = symbol.getIdentifierTable().getEntryById(child0.getId());
                 if (entry == null) {
-                    reportSemanticError(String.format("Use undefined array or not matched reference! array id is '%s'",
+                    reportSemanticError(String.format("Use undefined array! array id is '%s'",
                             child0.getId()));
                     return false;
                 }
-                symbol.setEntry(entry);
-                symbol.setFullRef(entry.getFullRef());
+                ArrayRefEntry arrayRefEntry = ArrayRefEntry.getArrayRefEntry(entry,
+                        child0.getIndexRegList());
+                if (arrayRefEntry == null) {
+                    reportSemanticError(String.format("Array reference does not match! array id is '%s'",
+                            child0.getId()));
+                    return false;
+                }
+                symbol.setEntry(arrayRefEntry);
+                symbol.setFullRef(arrayRefEntry.getFullRef());
                 break;
             }
             case 46:   // EXP_L -> EXP_L DOT HD_ARRAY
+            {
+                S_ExpL symbol = (S_ExpL) node.getSymbol();
+                S_ExpL child0 = (S_ExpL) node.childAt(0).getSymbol();
+                S_HDArray_Ref child2 = (S_HDArray_Ref) node.childAt(2).getSymbol();
+                Entry leftEntry = child0.getEntry();
+                String rightId = child2.getId();
+                MemberRefEntry memberRefEntry = symbol.getIdentifierTable().getStructMemberEntry(leftEntry, rightId);
+                if (memberRefEntry == null) {
+                    reportSemanticError(String.format("Use undefined array! array id is '%s'", rightId));
+                    return false;
+                }
+                ArrayRefEntry arrayRefEntry = ArrayRefEntry.getArrayRefEntry(memberRefEntry, child2.getIndexRegList());
+                if (arrayRefEntry == null) {
+                    reportSemanticError(String.format("Array reference does not match! array id is '%s'", rightId));
+                    return false;
+                }
+                symbol.setEntry(arrayRefEntry);
+                symbol.setFullRef(child0.getFullRef() + "." +
+                        memberRefEntry.getFullRef() + arrayRefEntry.getFullRef(false));
                 break;
+            }
             case 47:   // HD_ARRAY -> ID SQUARE_LEFT EXP_R SQUARE_RIGHT
             case 48:   // HD_ARRAY -> HD_ARRAY SQUARE_LEFT EXP_R SQUARE_RIGHT
             {
@@ -535,8 +705,7 @@ public class Whkas {
                         S_HDArray_Ref child0 = (S_HDArray_Ref) node.childAt(0).getSymbol();
                         symbol.addIndexRegList(child0.getIndexRegList());
                         symbol.setId(child0.getId());
-                    }
-                    else {
+                    } else {
                         symbol.setId(node.childAt(0).getValue().toString());
                     }
                     symbol.addIndexReg(((S_ExpR_Ari) child2).getRegId());
@@ -556,12 +725,17 @@ public class Whkas {
                         S_HDArray_Def child0 = (S_HDArray_Def) node.childAt(0).getSymbol();
                         symbol.addDimSizeList(child0.getDimSizeList());
                         symbol.setId(child0.getId());
-                    }
-                    else {
+                    } else {
                         symbol.setId(node.childAt(0).getValue().toString());
                     }
                     symbol.addDimSize((Integer) num);
                 }
+                break;
+            }
+            case 49:   // STATEMENT_EXP_R -> EXP_R SEMICOLON
+            {
+                S_AnyStatement symbol = (S_AnyStatement) node.getSymbol();
+                symbol.setNextLabel(Manager.nextLabel());
                 break;
             }
             case 50:   // NUMBER -> CONST_INTEGER
@@ -583,7 +757,7 @@ public class Whkas {
             case 57:   // STATEMENT_WHILE -> WHILE ROUND_LEFT EXP_R ROUND_RIGHT WHILE_BODY
             {
                 S_StatementWhile symbol = (S_StatementWhile) node.getSymbol();
-                Manager.addTetrad("j", "/*/", "/*/", symbol.getStartLabel());
+                Manager.addTetrad("j", "/#/", "/#/", symbol.getStartLabel());
                 symbol.setNextLabel(Manager.nextLabel());
                 break;
             }
@@ -639,7 +813,8 @@ public class Whkas {
                     S_StructSingleMember symbol = (S_StructSingleMember) node.getSymbol();
                     S_HDArray_Def child0 = (S_HDArray_Def) node.childAt(0).getSymbol();
                     symbol.setTypeId(child0.convert2ArrayType(symbol.getVarType()), child0.getId());
-                    if (symbol.getStructType().addMember(symbol.getType(), symbol.getId()) == null) {
+                    StructType.Member member = symbol.getStructType().addMember(symbol.getType(), symbol.getId());
+                    if (member == null) {
                         reportSemanticError();
                         return false;
                     }
@@ -687,7 +862,7 @@ public class Whkas {
                     return false;
                 }
                 S_ExpR_Ari expR_ari = (S_ExpR_Ari) expR;
-                Manager.addTetrad("=", Manager.reg2String(expR_ari.getRegId()), "/*/", expL.getFullRef());
+                Manager.addTetrad("=", Manager.reg2String(expR_ari.getRegId()), "/#/", expL.getFullRef());
                 S_AnyStatement symbol = (S_AnyStatement) node.getSymbol();
                 symbol.setNextLabel(Manager.nextLabel());
                 break;
@@ -712,43 +887,80 @@ public class Whkas {
                 break;
             case 78:  // STATEMENT_RETURN -> RETURN EXP_R SEMICOLON
             {
+                S_AnyStatement symbol = (S_AnyStatement) node.getSymbol();
                 S_ExpR child1 = (S_ExpR) node.childAt(1).getSymbol();
-                if (!child1.isArithmetic()) {
-                    reportSemanticError("Return type not match!");
+                if (!child1.isArithmetic() || !child1.getType().equals(symbol.getIdentifierTable().getReturnType())) {
+                    reportSemanticError(String.format("Return type not match! Expected: %s, given: %s",
+                            symbol.getIdentifierTable().getReturnType(), child1.getType()));
                     return false;
                 }
                 S_ExpR_Ari child1_ari = (S_ExpR_Ari) child1;
-                Manager.addTetrad("ret", Manager.reg2String(child1_ari.getRegId()), "/*/", "/*/");
+                Manager.addTetrad("ret", Manager.reg2String(child1_ari.getRegId()), "/#/", "/#/");
                 break;
             }
+            case 79:   // FUNC_CALL -> ID ROUND_LEFT EXP_R SEND_FUNC_ARGS ROUND_RIGHT
+            {
+                S_FuncCall symbol = (S_FuncCall) node.getSymbol();
+                S_ExpR child2 = (S_ExpR) node.childAt(2).getSymbol();
+                S_FuncParamCallList child3 = (S_FuncParamCallList) node.childAt(3).getSymbol();
+                if (!child2.isArithmetic()) {
+                    reportSemanticError("Arg for function call should be arithmetic value!");
+                    return false;
+                }
+                S_ExpR_Ari child2_ari = (S_ExpR_Ari) child2;
+                String functionId = node.childAt(0).getValue().toString();
+                Entry entry = symbol.getIdentifierTable().getEntryById(functionId);
+                if (entry == null || entry.getType().getTypeName() != Type.TypeName.FUNCTION) {
+                    reportSemanticError(String.format("Call undefined function %s", functionId));
+                    return false;
+                }
+                symbol.addParam(child2_ari.getRegId());
+                symbol.addParamList(child3.getParamRegList());
+                List<Integer> regIdList = symbol.getParamRegList();
+                for (int regId : regIdList) {
+                    Manager.addTetrad("param", Manager.reg2String(regId), "/#/", "/#/");
+                }
+                int regId = symbol.getRegId();
+                Manager.addTetrad("call", functionId, "/#/", Manager.reg2String(regId));
+                break;
+            }
+            case 80:   // FUNC_CALL -> ID ROUND_LEFT ROUND_RIGHT
+            {
+                S_FuncCall symbol = (S_FuncCall) node.getSymbol();
+                String functionId = node.childAt(0).getValue().toString();
+                Entry entry = symbol.getIdentifierTable().getEntryById(functionId);
+                if (entry == null || entry.getType().getTypeName() != Type.TypeName.FUNCTION) {
+                    reportSemanticError(String.format("Call undefined function %s", functionId));
+                    return false;
+                }
+                Manager.addTetrad("call", "/#/", "/#/", functionId);
+                break;
+            }
+            case 81:   // SEND_FUNC_ARGS -> COMMA EXP_R SEND_FUNC_ARGS
+            {
+                S_FuncParamCallList symbol = (S_FuncParamCallList) node.getSymbol();
+                S_ExpR child1 = (S_ExpR) node.childAt(1).getSymbol();
+                S_FuncParamCallList child2 = (S_FuncParamCallList) node.childAt(2).getSymbol();
+                if (!child1.isArithmetic()) {
+                    reportSemanticError("Arg for function call should be arithmetic value!");
+                    return false;
+                }
+                S_ExpR_Ari child0_ari = (S_ExpR_Ari) child1;
+                symbol.addParam(child0_ari.getRegId());
+                symbol.addParamList(child2.getParamRegList());
+                break;
+            }
+            case 82:   // SEND_FUNC_ARGS -> %empty
+                break;
             case 83:   // STATEMENT_FUNC_DEF -> FUNCTION FUNC_DEF_TYPE ID ROUND_LEFT ROUND_RIGHT STATEMENTS_BLOCK
-            {
-                S_StatementFuncDef symbol = (S_StatementFuncDef) node.getSymbol();
-                S_AnyType child1 = (S_AnyType) node.childAt(1).getSymbol();
-                symbol.setFunctionType(new FunctionType(List.of(), child1.getType()));
-                IdentifierTable.getGlobalTable().addEntry(symbol.getFunctionType(),
-                        node.childAt(2).getValue().toString());
-                Manager.addTetrad("ret", "/*/", "/*/", "/*/");
-                break;
-            }
             case 84:   // STATEMENT_FUNC_DEF -> FUNCTION FUNC_DEF_TYPE ID ROUND_LEFT SINGLE_RECV_FUNC_ARG RECV_FUNC_ARGS ROUND_RIGHT STATEMENTS_BLOCK
-            {
-                S_StatementFuncDef symbol = (S_StatementFuncDef) node.getSymbol();
-                S_AnyType child1 = (S_AnyType) node.childAt(1).getSymbol();
-                S_FuncParam child4 = (S_FuncParam) node.childAt(4).getSymbol();
-                S_FuncParamList child5 = (S_FuncParamList) node.childAt(5).getSymbol();
-                List<Type> typeList = new ArrayList<>(child5.getTypeList());
-                typeList.add(child4.getType());
-                symbol.setFunctionType(new FunctionType(typeList, child1.getType()));
-                IdentifierTable.getGlobalTable().addEntry(
-                        symbol.getFunctionType(), node.childAt(2).getValue().toString());
+                Manager.addTetrad("ret", "/#/", "/#/", "/#/");
                 break;
-            }
             case 85:   // RECV_FUNC_ARGS -> COMMA SINGLE_RECV_FUNC_ARG RECV_FUNC_ARGS
             {
-                S_FuncParamList symbol = (S_FuncParamList) node.getSymbol();
-                S_FuncParam child1 = (S_FuncParam) node.childAt(1).getSymbol();
-                S_FuncParamList child2 = (S_FuncParamList) node.childAt(2).getSymbol();
+                S_FuncParamDefList symbol = (S_FuncParamDefList) node.getSymbol();
+                S_FuncParamDef child1 = (S_FuncParamDef) node.childAt(1).getSymbol();
+                S_FuncParamDefList child2 = (S_FuncParamDefList) node.childAt(2).getSymbol();
                 symbol.addTypeId(child1.getType(), child1.getId());
                 symbol.addTypeIdList(child2.getTypeList(), child2.getIdList());
                 break;
@@ -757,7 +969,7 @@ public class Whkas {
                 break;
             case 87:   // SINGLE_RECV_FUNC_ARG -> FUNC_DEF_TYPE ID
             {
-                S_FuncParam symbol = (S_FuncParam) node.getSymbol();
+                S_FuncParamDef symbol = (S_FuncParamDef) node.getSymbol();
                 S_AnyType child0 = (S_AnyType) node.childAt(0).getSymbol();
                 symbol.setTypeId(child0.getType(), node.childAt(1).getValue().toString());
                 symbol.getIdentifierTable().addEntry(symbol.getType(), symbol.getId());

@@ -44,4 +44,55 @@ public class S_ExpR_Ari extends S_ExpR implements Symbol, HasIdTable {
         return regId;
     }
 
+    /**
+     * 获取算术运算结果
+     *
+     * @param that 另一个操作数（算数右值结点）
+     * @param op 操作符
+     * @return 算术运算结果；如果被整数0除或被整数0模，返回null
+     */
+    public Number doArithmeticCalWith(S_ExpR_Ari that, String op) {
+        if (that.getType().getTypeName() != this.getType().getTypeName()) {
+            throw new IllegalArgumentException("Type not match!");
+        }
+        if (type.getTypeName() == Type.TypeName.INTEGER) {
+            switch (op) {
+                case "+":
+                    return this.value.intValue() + that.value.intValue();
+                case "-":
+                    return this.value.intValue() - that.value.intValue();
+                case "*":
+                    return this.value.intValue() * that.value.intValue();
+                case "/":
+                    if (that.value.intValue() == 0) {
+                        return null;
+                    }
+                    return this.value.intValue() / that.value.intValue();
+                case "%":
+                    if (that.value.intValue() == 0) {
+                        return null;
+                    }
+                    return this.value.intValue() % that.value.intValue();
+                default:
+                    throw new IllegalArgumentException("Unsupported operation " + op);
+            }
+        } else if (type.getTypeName() == Type.TypeName.FLOAT) {
+            switch (op) {
+                case "+":
+                    return this.value.floatValue() + that.value.floatValue();
+                case "-":
+                    return this.value.floatValue() - that.value.floatValue();
+                case "*":
+                    return this.value.floatValue() * that.value.floatValue();
+                case "/":
+                    return this.value.floatValue() / that.value.floatValue();
+                case "%":
+                    return this.value.floatValue() % that.value.floatValue();
+                default:
+                    throw new IllegalArgumentException("Unsupported operation " + op);
+            }
+        }
+        return null;
+    }
+
 }

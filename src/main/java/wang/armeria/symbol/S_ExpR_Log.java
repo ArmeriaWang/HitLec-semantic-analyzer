@@ -3,7 +3,7 @@ package wang.armeria.symbol;
 import wang.armeria.common.Label;
 import wang.armeria.whkas.IdentifierTable;
 
-public class S_ExpR_Log extends S_AnyStatement
+public class S_ExpR_Log extends S_ExpR
         implements Symbol, HasControl {
 
     private Label goTrue;
@@ -16,12 +16,12 @@ public class S_ExpR_Log extends S_AnyStatement
     }
 
     @Override
-    public Label getGoTrue() {
+    public Label getGoTrueLabel() {
         return goTrue;
     }
 
     @Override
-    public Label getGoFalse() {
+    public Label getGoFalseLabel() {
         return goFalse;
     }
 

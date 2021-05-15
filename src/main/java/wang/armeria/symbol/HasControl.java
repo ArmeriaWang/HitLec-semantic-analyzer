@@ -4,8 +4,8 @@ import wang.armeria.common.Label;
 
 public interface HasControl {
 
-    Label getGoTrue();
-    Label getGoFalse();
+    Label getGoTrueLabel();
+    Label getGoFalseLabel();
 
     void inherentGoTrueLabel(Label goTrue);
     void inherentGoFalseLabel(Label goFalse);

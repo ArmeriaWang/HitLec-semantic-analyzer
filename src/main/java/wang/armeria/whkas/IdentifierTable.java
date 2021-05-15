@@ -1,5 +1,6 @@
 package wang.armeria.whkas;
 
+import wang.armeria.type.FunctionType;
 import wang.armeria.type.StructType;
 import wang.armeria.type.Type;
 
@@ -15,11 +16,13 @@ public class IdentifierTable {
     private static int topAddr = 0;
     private static int globalTopAddr = -4;
     private final boolean isGlobal;
+    private String functionId;
 
     private IdentifierTable(boolean isGlobal) {
         tempStack = new Stack<>();
         tempMap = new HashMap<>();
         this.isGlobal = isGlobal;
+        functionId = null;
     }
 
     public IdentifierTable() {
@@ -96,13 +99,39 @@ public class IdentifierTable {
         return null;
     }
 
-    public Entry getStructMemberEntry(Entry structVarEntry, String id) {
+    public MemberRefEntry getStructMemberEntry(Entry structVarEntry, String id) {
         StructType structType = (StructType) structVarEntry.getType();
         StructType.Member member = structType.getMemberById(id);
         if (member == null) {
             return null;
         }
-        return new Entry(member.getType(), member.getId(), structVarEntry.getOffset() + member.getOffset());
+        return new MemberRefEntry(member.getType(), member.getId(),
+                structVarEntry.getOffset() + member.getOffset(),
+                member.getOffset());
+    }
+
+    public String getFunctionId() {
+        return functionId;
+    }
+
+    public void setFunctionId(String functionId) {
+        if (isGlobal) {
+            throw new IllegalArgumentException("Cannot define functionId for global table!");
+        }
+        if (this.functionId != null) {
+            throw new IllegalArgumentException("Repeatedly define functionId of id table!");
+        }
+        this.functionId = functionId;
+    }
+
+    public Type getReturnType() {
+        if (isGlobal) {
+            throw new IllegalArgumentException("Cannot get return type of global table!");
+        }
+        if (this.functionId == null) {
+            throw new NullPointerException("functionId is not defined!");
+        }
+        return ((FunctionType) IdentifierTable.getGlobalTable().getEntryById(functionId).getType()).getReturnType();
     }
 
     public static void printTable() {

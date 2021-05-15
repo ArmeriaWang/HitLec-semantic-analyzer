@@ -25,9 +25,7 @@ public abstract class Type {
         return typeName;
     }
 
-    public int getWidth() throws IllegalAccessException {
-        throw new IllegalAccessException();
-    }
+    public abstract int getWidth();
 
     @Override
     public boolean equals(Object o) {

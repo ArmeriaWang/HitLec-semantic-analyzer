@@ -1,5 +1,7 @@
 package wang.armeria.type;
 
+import java.util.Objects;
+
 public class ArrayType extends Type {
 
     private final Type contentType;
@@ -23,7 +25,7 @@ public class ArrayType extends Type {
         ArrayType arrayType;
         do {
             arrayType = (ArrayType) this.contentType;
-        } while (arrayType.contentType.getTypeName() != TypeName.ARRAY);
+        } while (arrayType.contentType.getTypeName() == TypeName.ARRAY);
         return arrayType.contentType;
     }
 
@@ -33,8 +35,22 @@ public class ArrayType extends Type {
     }
 
     @Override
-    public int getWidth() throws IllegalAccessException {
+    public int getWidth() {
         return length * contentType.getWidth();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        ArrayType arrayType = (ArrayType) o;
+        return length == arrayType.length && Objects.equals(contentType, arrayType.contentType);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), contentType, length);
     }
 
 }

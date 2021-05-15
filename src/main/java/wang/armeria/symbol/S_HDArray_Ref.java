@@ -8,7 +8,7 @@ import wang.armeria.whkas.Manager;
 import java.util.ArrayList;
 import java.util.List;
 
-public class S_HDArray_Ref extends S_HDArray {
+public class S_HDArray_Ref extends S_HDArray implements HasIdTable {
 
     private final List<Integer> indexRegList;
     private ArrayType arrayType;

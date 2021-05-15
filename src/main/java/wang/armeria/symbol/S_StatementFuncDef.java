@@ -1,12 +1,13 @@
 package wang.armeria.symbol;
 
+import wang.armeria.type.FunctionType;
 import wang.armeria.type.Type;
 import wang.armeria.whkas.IdentifierTable;
 
 public class S_StatementFuncDef implements Symbol, HasIdTable {
 
     private final IdentifierTable identifierTable;  // I
-    private Type functionType;  // S
+    private FunctionType functionType;  // S
 
     public S_StatementFuncDef() {
         this.identifierTable = new IdentifierTable();
@@ -21,7 +22,7 @@ public class S_StatementFuncDef implements Symbol, HasIdTable {
         return functionType;
     }
 
-    public void setFunctionType(Type functionType) {
+    public void setFunctionType(FunctionType functionType) {
         this.functionType = functionType;
     }
 

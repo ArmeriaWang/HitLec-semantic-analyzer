@@ -7,9 +7,13 @@ function int plus(int a, int b) {
         return a + b + x % 5;
     }
 }
+struct Data {
+    int x;
+};
 struct Car {
     int height;
     float *weight;
+    struct Data data[12][13];
 };
 struct Node {
     int from, to;
@@ -20,13 +24,17 @@ int ga, gb;
 function int main()
 {
     int x, *y, i;
-    while (i <= 10) {
+    while (i <= 10 && x > 3) {
         i = i + 1;
         int z;
     }
     int arr[10][20][30];
     arr[4][5][6] = arr[6][5][4];
+    struct Car car;
+    arr[9][8][7] = car.data[1][2].x;
     struct Node node;
+    int res;
+    res = plus(x, arr[0][0][0]);
     node.from = 2;
     node.car.weight = 1.1;
 }

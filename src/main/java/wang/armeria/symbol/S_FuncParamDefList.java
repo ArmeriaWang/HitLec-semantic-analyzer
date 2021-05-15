@@ -6,13 +6,13 @@ import wang.armeria.whkas.IdentifierTable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class S_FuncParamList implements Symbol, HasIdTable {
+public class S_FuncParamDefList implements Symbol, HasIdTable {
 
     private final IdentifierTable identifierTable;  // I
     private final List<Type> typeList = new ArrayList<>();  // S
     private final List<String> idList = new ArrayList<>();  // S
 
-    public S_FuncParamList(IdentifierTable identifierTable) {
+    public S_FuncParamDefList(IdentifierTable identifierTable) {
         this.identifierTable = identifierTable;
     }
 

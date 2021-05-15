@@ -28,13 +28,7 @@ public class Entry {
     }
 
     public int getWidth() {
-        try {
-            return type.getWidth();
-        }
-        catch (IllegalAccessException e) {
-            e.printStackTrace();
-            throw new RuntimeException();
-        }
+        return type.getWidth();
     }
 
     @Override

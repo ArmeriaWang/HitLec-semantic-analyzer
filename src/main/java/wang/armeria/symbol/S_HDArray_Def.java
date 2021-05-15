@@ -37,11 +37,11 @@ public class S_HDArray_Def extends S_HDArray {
         this.id = id;
     }
 
-    public ArrayType convert2ArrayType(Type varType) {
+    public ArrayType convert2ArrayType(Type basicType) {
         if (dimSizeList.size() < 1) {
             throw new RuntimeException("Dimension of dimList is less than 1!");
         }
-        ArrayType arrayType = new ArrayType(varType, dimSizeList.get(0));
+        ArrayType arrayType = new ArrayType(basicType, dimSizeList.get(0));
         for (int i = 1; i < dimSizeList.size(); i++) {
             arrayType = new ArrayType(arrayType, dimSizeList.get(i));
         }

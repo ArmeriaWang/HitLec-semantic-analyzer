@@ -3,13 +3,13 @@ package wang.armeria.symbol;
 import wang.armeria.type.Type;
 import wang.armeria.whkas.IdentifierTable;
 
-public class S_FuncParam implements Symbol, HasIdTable{
+public class S_FuncParamDef implements Symbol, HasIdTable{
 
     private Type type;  // S
     private String id;
     private final IdentifierTable identifierTable;  // I
 
-    public S_FuncParam(IdentifierTable identifierTable) {
+    public S_FuncParamDef(IdentifierTable identifierTable) {
         this.identifierTable = identifierTable;
     }
 

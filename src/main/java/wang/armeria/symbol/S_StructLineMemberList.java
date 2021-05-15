@@ -2,20 +2,28 @@ package wang.armeria.symbol;
 
 import wang.armeria.type.StructType;
 import wang.armeria.type.Type;
+import wang.armeria.whkas.IdentifierTable;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class S_StructLineMemberList implements Symbol, HasStructType, HasVarType {
+public class S_StructLineMemberList implements Symbol, HasStructType, HasVarType, HasIdTable {
 
     private final StructType structType;  // I
     private final Type varType;  // I - brother
     private final List<Type> typeList = new ArrayList<>();  // S
     private final List<String> idList = new ArrayList<>();  // S
+    private final IdentifierTable identifierTable;
 
-    public S_StructLineMemberList(StructType structType, Type varType) {
+    public S_StructLineMemberList(IdentifierTable identifierTable, StructType structType, Type varType) {
         this.structType = structType;
+        this.identifierTable = identifierTable;
         this.varType = varType;
+    }
+
+    @Override
+    public IdentifierTable getIdentifierTable() {
+        return identifierTable;
     }
 
     public void addTypeId(Type type, String id) {

@@ -62,14 +62,9 @@ public class StructType extends Type {
     public int getWidth() {
         int ret = 0;
         for (Member member : memberList) {
-            try {
-                ret += member.getType().getWidth();
-                while (ret % 4 > 0) {
-                    ret++;
-                }
-            }
-            catch (IllegalAccessException e) {
-                e.printStackTrace();
+            ret += member.getType().getWidth();
+            while (ret % 4 > 0) {
+                ret++;
             }
         }
         return ret;
@@ -82,8 +77,7 @@ public class StructType extends Type {
             if (member.getType().getTypeName() == TypeName.STRUCT) {
                 StructType structType = (StructType) member.getType();
                 builder.append("struct-").append(structType.getStructName()).append("*");
-            }
-            else {
+            } else {
                 builder.append(member.getType()).append("*");
             }
         }
@@ -116,6 +110,20 @@ public class StructType extends Type {
         for (Member member : memberList) {
             System.out.printf("%-10s\t%-20s\n", member.getId(), member.getType());
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        StructType that = (StructType) o;
+        return Objects.equals(structName, that.structName);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), structName);
     }
 
 }
