@@ -97,6 +97,13 @@ public class ASTreeNode {
         this.symbol = symbol;
     }
 
+    public void setSymbol(Symbol symbol, boolean force) {
+        if (this.symbol != null && !force) {
+            throw new RuntimeException("Symbol repeatedly assigned!");
+        }
+        this.symbol = symbol;
+    }
+
     /**
      * 为本节点设置子节点，并将子节点列表中节点的父节点全部设置为本节点
      * @param children 子节点列表

@@ -29,6 +29,10 @@ public class S_StructSingleMember implements Symbol, HasStructType, HasVarType {
         return id;
     }
 
+    public Type getType() {
+        return type;
+    }
+
     @Override
     public StructType getStructType() {
         return structType;

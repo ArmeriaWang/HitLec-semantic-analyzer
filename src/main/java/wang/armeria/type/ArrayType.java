@@ -19,6 +19,14 @@ public class ArrayType extends Type {
         return length;
     }
 
+    public Type getBasicType() {
+        ArrayType arrayType;
+        do {
+            arrayType = (ArrayType) this.contentType;
+        } while (arrayType.contentType.getTypeName() != TypeName.ARRAY);
+        return arrayType.contentType;
+    }
+
     @Override
     public String toString() {
         return String.format("array(%d, %s)", length, contentType);

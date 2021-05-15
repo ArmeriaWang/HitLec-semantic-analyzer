@@ -21,7 +21,10 @@ public class FunctionType extends Type {
         for (Type type : paramList) {
             builder.append(type).append("*");
         }
-        builder.replace(builder.length() - 1, builder.length(), "->" + returnType);
+        if (paramList.size() > 0) {
+            builder.deleteCharAt(builder.length() - 1);
+        }
+        builder.append("->").append(returnType);
         return builder.toString();
     }
 

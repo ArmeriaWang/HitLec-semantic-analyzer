@@ -1,27 +1,29 @@
 package wang.armeria.symbol;
 
-import wang.armeria.type.Type;
+import wang.armeria.whkas.IdentifierTable;
 
-public class S_HDArray implements Symbol {
+public abstract class S_HDArray implements Symbol, HasIdTable {
 
-    private final Type type;
-    private final String id;
+    private final boolean isRef;
+    private final IdentifierTable identifierTable;
 
-    public S_HDArray(Type type, String id) {
-        this.type = type;
-        this.id = id;
+    protected S_HDArray(IdentifierTable identifierTable, boolean isRef) {
+        this.isRef = isRef;
+        this.identifierTable = identifierTable;
     }
 
-    public Type getType() {
-        return type;
+    public boolean isRef() {
+        return isRef;
     }
 
-    public String getId() {
-        return id;
+    @Override
+    public IdentifierTable getIdentifierTable() {
+        return identifierTable;
     }
 
     @Override
     public SymbolKind getSymbolKind() {
         return SymbolKind.S_HD_ARRAY;
     }
+
 }

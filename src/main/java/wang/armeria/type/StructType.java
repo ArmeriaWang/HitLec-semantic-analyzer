@@ -37,6 +37,15 @@ public class StructType extends Type {
         return member;
     }
 
+    public Member getMemberById(String id) {
+        for (Member member : memberList) {
+            if (member.getId().equals(id)) {
+                return member;
+            }
+        }
+        return null;
+    }
+
     public String getStructName() {
         return structName;
     }
@@ -70,7 +79,13 @@ public class StructType extends Type {
     public String toString() {
         StringBuilder builder = new StringBuilder();
         for (Member member : memberList) {
-            builder.append(member.getType()).append("*");
+            if (member.getType().getTypeName() == TypeName.STRUCT) {
+                StructType structType = (StructType) member.getType();
+                builder.append("struct-").append(structType.getStructName()).append("*");
+            }
+            else {
+                builder.append(member.getType()).append("*");
+            }
         }
         builder.deleteCharAt(builder.length() - 1);
         return builder.toString();

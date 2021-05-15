@@ -1,5 +1,7 @@
 package wang.armeria.type;
 
+import java.util.Objects;
+
 public abstract class Type {
 
     public enum TypeName {
@@ -27,4 +29,16 @@ public abstract class Type {
         throw new IllegalAccessException();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Type type = (Type) o;
+        return typeName == type.typeName;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(typeName);
+    }
 }

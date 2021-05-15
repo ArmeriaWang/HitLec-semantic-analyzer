@@ -2,17 +2,10 @@ package wang.armeria.symbol;
 
 import wang.armeria.whkas.IdentifierTable;
 
-public class S_StatementVarDef implements Symbol, HasIdTable {
-
-    private final IdentifierTable identifierTable;
+public class S_StatementVarDef extends S_AnyStatement {
 
     public S_StatementVarDef(IdentifierTable identifierTable) {
-        this.identifierTable = identifierTable;
-    }
-
-    @Override
-    public IdentifierTable getIdentifierTable() {
-        return identifierTable;
+        super(identifierTable);
     }
 
     @Override
