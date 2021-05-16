@@ -2,6 +2,7 @@ package wang.armeria.whkas;
 
 import wang.armeria.ast.ASTree;
 import wang.armeria.ast.ASTreeNode;
+import wang.armeria.common.Position;
 import wang.armeria.symbol.*;
 import wang.armeria.type.*;
 
@@ -43,11 +44,11 @@ public class Whkas {
             }
         }
         S_ExpR_Ari symbol = (S_ExpR_Ari) node.getSymbol();
-        symbol.setType(child0.getType());
+        symbol.setType(child0_ari.getType());
         if (child0_ari.getValue() != null && child2_ari.getValue() != null) {
             Number opValue = child0_ari.doArithmeticCalWith(child2_ari, op);
             if (opValue == null) {
-                reportSemanticError("Divide or mod by zero!");
+                reportSemanticError("Divide or mod by zero!", node.childAt(2).getPosition());
                 return false;
             }
             symbol.setValue(opValue);
@@ -75,10 +76,16 @@ public class Whkas {
         return true;
     }
 
+    /**
+     * 递归时访问到Exp_R
+     *
+     * @param node
+     * @return
+     */
     private boolean doPreWithExpRLog(ASTreeNode node) {
         S_ExpR_Log symbol = new S_ExpR_Log(getIdTableOfFather(node));
         if (node.getFather().getProducer() == 29) {
-            // EXP_R -> EXP_R LOR EXP_R
+            // EXP_R -> {?} EXP_R LOR {?} EXP_R
             S_ExpR_Log fatherSymbol = (S_ExpR_Log) node.getFather().getSymbol();
             if (node.getSonRank() == 0) {
                 symbol.inherentGoTrueLabel(fatherSymbol.getGoTrueLabel());
@@ -89,7 +96,7 @@ public class Whkas {
                 symbol.inherentGoFalseLabel(fatherSymbol.getGoFalseLabel());
             }
         } else if (node.getFather().getProducer() == 30) {
-            // EXP_R -> EXP_R LAND EXP_R
+            // EXP_R -> {?} EXP_R LAND {?} EXP_R
             S_ExpR_Log fatherSymbol = (S_ExpR_Log) node.getFather().getSymbol();
             if (node.getSonRank() == 0) {
                 symbol.inherentGoFalseLabel(fatherSymbol.getGoFalseLabel());
@@ -100,7 +107,12 @@ public class Whkas {
                 symbol.inherentGoFalseLabel(fatherSymbol.getGoFalseLabel());
             }
         } else if (node.getFather().getProducer() == 31) {
-            // EXP_R -> NOT EXP_R
+            // EXP_R -> NOT {?} EXP_R
+            S_ExpR_Log fatherSymbol = (S_ExpR_Log) node.getFather().getSymbol();
+            symbol.inherentGoTrueLabel(fatherSymbol.getGoFalseLabel());
+            symbol.inherentGoFalseLabel(fatherSymbol.getGoTrueLabel());
+        } else if (node.getFather().getProducer() == 37) {
+            // EXP_R -> ROUND_LEFT {?} EXP_R ROUND_RIGHT
             S_ExpR_Log fatherSymbol = (S_ExpR_Log) node.getFather().getSymbol();
             symbol.inherentGoTrueLabel(fatherSymbol.getGoTrueLabel());
             symbol.inherentGoFalseLabel(fatherSymbol.getGoFalseLabel());
@@ -127,7 +139,7 @@ public class Whkas {
             case 89:   // RECV_HD_ARRAY -> ID SQUARE_LEFT SQUARE_RIGHT MORE_ARRAY_DIM
             case 90:   // RECV_HD_ARRAY -> ID SQUARE_LEFT EXP_R SQUARE_RIGHT MORE_ARRAY_DIM            case 95:   // VAR_DEF_TYPE -> DT_BOOLEAN
             case 99:   // FUNC_DEF_TYPE -> DT_BOOLEAN
-                reportSemanticError(String.format("Unsupported producer %s!", node.getProducer()));
+                reportSemanticError(String.format("Unsupported producer %s!", node.getProducer()), node.getPosition());
                 return false;
 
             case 1:    // PROGRAM -> TOP_STATEMENTS
@@ -206,10 +218,8 @@ public class Whkas {
             case 21:   // EXP_R -> EXP_R GE EXP_R
             case 22:   // EXP_R -> EXP_R NE EXP_R
             case 23:   // EXP_R -> EXP_R EQ EXP_R
-            {
                 doPreWithExpRLog(node);
                 break;
-            }
             case 24:   // EXP_R -> EXP_R PLUS EXP_R
             case 25:   // EXP_R -> EXP_R MINUS EXP_R
             case 26:   // EXP_R -> EXP_R STAR EXP_R
@@ -225,7 +235,8 @@ public class Whkas {
             case 37:   // EXP_R -> ROUND_LEFT EXP_R ROUND_RIGHT
             {
                 int faProducer = node.getFather().getProducer();
-                if (faProducer == 29 || faProducer == 30 || faProducer == 31) {
+                if (faProducer == 29 || faProducer == 30 || faProducer == 31 ||
+                        (faProducer == 37 && ((S_ExpR) node.getFather().getSymbol()).isLogical())) {
                     doPreWithExpRLog(node);
                 } else {
                     node.setSymbol(new S_ExpR_Ari(getIdTableOfFather(node)));
@@ -406,7 +417,7 @@ public class Whkas {
                 if (!finished) {
                     break;
                 }
-                reportSemanticError();
+                reportSemanticError("Unknown producer " + node.getProducer() + "!", node.getPosition());
                 return false;
         }
         return true;
@@ -428,7 +439,7 @@ public class Whkas {
             case 90:   // RECV_HD_ARRAY -> ID SQUARE_LEFT EXP_R SQUARE_RIGHT MORE_ARRAY_DIM
             case 95:   // VAR_DEF_TYPE -> DT_BOOLEAN
             case 99:   // FUNC_DEF_TYPE -> DT_BOOLEAN
-                reportSemanticError(String.format("Unsupported producer %s!", node.getProducer()));
+                reportSemanticError(String.format("Unsupported producer %s!", node.getProducer()), node.getPosition());
                 return false;
             case 1:    // PROGRAM -> TOP_STATEMENTS
             case 2:    // TOP_STATEMENTS -> STATEMENT_VAR_DEF TOP_STATEMENTS
@@ -446,8 +457,7 @@ public class Whkas {
                 }
                 catch (IllegalAccessException e) {
                     e.printStackTrace();
-                    reportSemanticError();
-                    return false;
+                    throw new RuntimeException();
                 }
                 break;
             }
@@ -476,7 +486,8 @@ public class Whkas {
             case 18:   // EXP_R -> EXP_R LT EXP_R
             {
                 if (!doPostWithRelOpExpR(node, "<")) {
-                    reportSemanticError("Expression next to the relative op < is not arithmetic!");
+                    reportSemanticError("Expression next to the relative op < is not arithmetic!",
+                            node.childAt(1).getPosition());
                     return false;
                 }
                 break;
@@ -484,7 +495,8 @@ public class Whkas {
             case 19:   // EXP_R -> EXP_R LE EXP_R
             {
                 if (!doPostWithRelOpExpR(node, "<=")) {
-                    reportSemanticError("Expression next to the relative op <= is not arithmetic!");
+                    reportSemanticError("Expression next to the relative op <= is not arithmetic!",
+                            node.childAt(1).getPosition());
                     return false;
                 }
                 break;
@@ -492,7 +504,8 @@ public class Whkas {
             case 20:   // EXP_R -> EXP_R GT EXP_R
             {
                 if (!doPostWithRelOpExpR(node, ">")) {
-                    reportSemanticError("Expression next to the relative op > is not arithmetic!");
+                    reportSemanticError("Expression next to the relative op > is not arithmetic!",
+                            node.childAt(1).getPosition());
                     return false;
                 }
                 break;
@@ -500,7 +513,8 @@ public class Whkas {
             case 21:   // EXP_R -> EXP_R GE EXP_R
             {
                 if (!doPostWithRelOpExpR(node, ">=")) {
-                    reportSemanticError("Expression next to the relative op >= is not arithmetic!");
+                    reportSemanticError("Expression next to the relative op >= is not arithmetic!",
+                            node.childAt(1).getPosition());
                     return false;
                 }
                 break;
@@ -508,7 +522,8 @@ public class Whkas {
             case 22:   // EXP_R -> EXP_R NE EXP_R
             {
                 if (!doPostWithRelOpExpR(node, "!=")) {
-                    reportSemanticError("Expression next to the relative op != is not arithmetic!");
+                    reportSemanticError("Expression next to the relative op != is not arithmetic!",
+                            node.childAt(1).getPosition());
                     return false;
                 }
                 break;
@@ -516,7 +531,8 @@ public class Whkas {
             case 23:   // EXP_R -> EXP_R EQ EXP_R
             {
                 if (!doPostWithRelOpExpR(node, "==")) {
-                    reportSemanticError("Expression next to the relative op == is not arithmetic!");
+                    reportSemanticError("Expression next to the relative op == is not arithmetic!",
+                            node.childAt(1).getPosition());
                     return false;
                 }
                 break;
@@ -524,7 +540,8 @@ public class Whkas {
             case 24:   // EXP_R -> EXP_R PLUS EXP_R
             {
                 if (!doWithArithmeticExpR(node, "+")) {
-                    reportSemanticError("Type not match!");
+                    reportSemanticError("Type not match next to arithmetic op + !",
+                            node.childAt(1).getPosition());
                     return false;
                 }
                 break;
@@ -532,7 +549,8 @@ public class Whkas {
             case 25:   // EXP_R -> EXP_R MINUS EXP_R
             {
                 if (!doWithArithmeticExpR(node, "-")) {
-                    reportSemanticError("Type not match!");
+                    reportSemanticError("Type not match next to arithmetic op - !",
+                            node.childAt(1).getPosition());
                     return false;
                 }
                 break;
@@ -540,7 +558,8 @@ public class Whkas {
             case 26:   // EXP_R -> EXP_R STAR EXP_R
             {
                 if (!doWithArithmeticExpR(node, "*")) {
-                    reportSemanticError("Type not match!");
+                    reportSemanticError("Type not match next to arithmetic op * !",
+                            node.childAt(1).getPosition());
                     return false;
                 }
                 break;
@@ -548,7 +567,8 @@ public class Whkas {
             case 27:   // EXP_R -> EXP_R DIVIDE EXP_R
             {
                 if (!doWithArithmeticExpR(node, "/")) {
-                    reportSemanticError("Type not match!");
+                    reportSemanticError("Type not match next to arithmetic op / !",
+                            node.childAt(1).getPosition());
                     return false;
                 }
                 break;
@@ -556,25 +576,14 @@ public class Whkas {
             case 28:   // EXP_R -> EXP_R MOD EXP_R
             {
                 if (!doWithArithmeticExpR(node, "%")) {
-                    reportSemanticError("Type not match!");
+                    reportSemanticError("Type not match next to arithmetic op % !",
+                            node.childAt(1).getPosition());
                     return false;
                 }
                 break;
             }
             case 29:   // EXP_R -> EXP_R LOR EXP_R
-            {
-                S_ExpR child0 = (S_ExpR) node.childAt(0).getSymbol();
-                S_ExpR child2 = (S_ExpR) node.childAt(1).getSymbol();
-                if (!child0.isLogical() || !child2.isLogical()) {
-                    reportSemanticError("Logical operation should use logical expression!");
-                }
-                S_ExpR_Log child0_log = (S_ExpR_Log) child0;
-                S_ExpR_Log child2_log = (S_ExpR_Log) child2;
-
-
-            }
             case 30:   // EXP_R -> EXP_R LAND EXP_R
-
             case 31:   // EXP_R -> LNOT EXP_R
                 break;
             case 37:   // EXP_R -> ROUND_LEFT EXP_R ROUND_RIGHT
@@ -584,7 +593,7 @@ public class Whkas {
                     S_ExpR_Ari child1_ari = (S_ExpR_Ari) node.getFather().childAt(1).getSymbol();
                     S_ExpR_Ari symbol_ari = (S_ExpR_Ari) node.getSymbol();
                     node.setSymbol(symbol_ari, true);
-                    symbol_ari.setType(child1.getType());
+                    symbol_ari.setType(child1_ari.getType());
                     Manager.addTetrad("=", Manager.reg2String(child1_ari.getRegId()), "/#/",
                             Manager.reg2String(symbol_ari.getRegId()));
                 }
@@ -615,7 +624,7 @@ public class Whkas {
                 S_FuncCall child0 = (S_FuncCall) node.childAt(0).getSymbol();
                 symbol.setType(child0.getIdentifierTable().getReturnType());
                 int regId = symbol.getRegId();
-                Manager.addTetrad("=", Manager.reg2String(child0.getRegId()), "/#/",
+                Manager.addTetrad("=", Manager.reg2String(child0.getRetRegId()), "/#/",
                         Manager.reg2String(regId));
                 break;
             }
@@ -625,7 +634,8 @@ public class Whkas {
                 String id = node.childAt(0).getValue().toString();
                 Entry entry = symbol.getIdentifierTable().getEntryById(id);
                 if (entry == null) {
-                    reportSemanticError(String.format("Use undefined identifier '%s'!", id));
+                    reportSemanticError(String.format("Use undefined identifier '%s'!", id),
+                            node.childAt(0).getPosition());
                     return false;
                 }
                 symbol.setEntry(entry);
@@ -640,7 +650,9 @@ public class Whkas {
                 String rightId = node.childAt(2).getValue().toString();
                 MemberRefEntry memberRefEntry = symbol.getIdentifierTable().getStructMemberEntry(leftEntry, rightId);
                 if (memberRefEntry == null) {
-                    reportSemanticError(String.format("Struct member %s of %s not defined!", rightId, leftEntry.getId()));
+                    reportSemanticError(
+                            String.format("Struct member %s of %s not defined!", rightId, leftEntry.getId()),
+                            node.childAt(2).getPosition());
                     return false;
                 }
                 symbol.setFullRef(child0.getFullRef() + "." + memberRefEntry.getFullRef());
@@ -654,14 +666,14 @@ public class Whkas {
                 Entry entry = symbol.getIdentifierTable().getEntryById(child0.getId());
                 if (entry == null) {
                     reportSemanticError(String.format("Use undefined array! array id is '%s'",
-                            child0.getId()));
+                            child0.getId()), node.childAt(0).getPosition());
                     return false;
                 }
                 ArrayRefEntry arrayRefEntry = ArrayRefEntry.getArrayRefEntry(entry,
                         child0.getIndexRegList());
                 if (arrayRefEntry == null) {
                     reportSemanticError(String.format("Array reference does not match! array id is '%s'",
-                            child0.getId()));
+                            child0.getId()), node.childAt(0).getPosition());
                     return false;
                 }
                 symbol.setEntry(arrayRefEntry);
@@ -677,12 +689,14 @@ public class Whkas {
                 String rightId = child2.getId();
                 MemberRefEntry memberRefEntry = symbol.getIdentifierTable().getStructMemberEntry(leftEntry, rightId);
                 if (memberRefEntry == null) {
-                    reportSemanticError(String.format("Use undefined array! array id is '%s'", rightId));
+                    reportSemanticError(String.format("Use undefined array! array id is '%s'", rightId),
+                            node.childAt(2).getPosition());
                     return false;
                 }
                 ArrayRefEntry arrayRefEntry = ArrayRefEntry.getArrayRefEntry(memberRefEntry, child2.getIndexRegList());
                 if (arrayRefEntry == null) {
-                    reportSemanticError(String.format("Array reference does not match! array id is '%s'", rightId));
+                    reportSemanticError(String.format("Array reference does not match! array id is '%s'", rightId),
+                            node.childAt(2).getPosition());
                     return false;
                 }
                 symbol.setEntry(arrayRefEntry);
@@ -697,8 +711,10 @@ public class Whkas {
                 if (isRef) {
                     S_HDArray_Ref symbol = (S_HDArray_Ref) node.getSymbol();
                     S_ExpR child2 = (S_ExpR) node.childAt(2).getSymbol();
-                    if (child2.getType().getTypeName() != Type.TypeName.INTEGER) {
-                        reportSemanticError("Array reference should use integers!");
+                    if (!child2.isArithmetic() ||
+                            ((S_ExpR_Ari) child2).getType().getTypeName() != Type.TypeName.INTEGER) {
+                        reportSemanticError("Array reference should use integers!",
+                                node.childAt(2).getPosition());
                         return false;
                     }
                     if (node.getProducer() == 48) {
@@ -712,13 +728,16 @@ public class Whkas {
                 } else {
                     S_HDArray_Def symbol = (S_HDArray_Def) node.getSymbol();
                     S_ExpR child2 = (S_ExpR) node.childAt(2).getSymbol();
-                    if (child2.getType().getTypeName() != Type.TypeName.INTEGER) {
-                        reportSemanticError("Array dim definition should use integers!");
+                    if (!child2.isArithmetic() ||
+                            ((S_ExpR_Ari) child2).getType().getTypeName() != Type.TypeName.INTEGER) {
+                        reportSemanticError("Array dim definition should use integers!",
+                                node.childAt(2).getPosition());
                         return false;
                     }
                     Number num = ((S_ExpR_Ari) child2).getValue();
                     if (num == null) {
-                        reportSemanticError("Array dim definition should use constants!");
+                        reportSemanticError("Array dim definition should use constants!",
+                                node.childAt(2).getPosition());
                         return false;
                     }
                     if (node.getProducer() == 48) {
@@ -774,7 +793,8 @@ public class Whkas {
                     String id = node.childAt(0).getValue().toString();
                     symbol.setTypeId(symbol.getVarType(), id);
                     if (symbol.getStructType().addMember(symbol.getVarType(), id) == null) {
-                        reportSemanticError();
+                        reportSemanticError(String.format("Repeatedly define struct member id %s!", id),
+                                node.childAt(0).getPosition());
                         return false;
                     }
                 } else if (node.getSymbol() instanceof S_DefSingleVar) {
@@ -782,7 +802,8 @@ public class Whkas {
                     symbol.setTypeId(symbol.getVarType(), node.childAt(0).getValue().toString());
                     Entry entry = symbol.getIdentifierTable().addEntry(symbol.getType(), symbol.getId());
                     if (entry == null) {
-                        reportSemanticError();
+                        reportSemanticError(String.format("Repeatedly define variable id %s!", symbol.getId()),
+                                node.childAt(0).getPosition());
                         return false;
                     }
                 }
@@ -794,7 +815,8 @@ public class Whkas {
                     String id = node.childAt(1).getValue().toString();
                     symbol.setTypeId(type, id);
                     if (symbol.getStructType().addMember(type, id) == null) {
-                        reportSemanticError();
+                        reportSemanticError(String.format("Repeatedly define struct member id %s!", id),
+                                node.childAt(1).getPosition());
                         return false;
                     }
                 } else if (node.getSymbol() instanceof S_DefSingleVar) {
@@ -803,7 +825,8 @@ public class Whkas {
                             node.childAt(1).getValue().toString());
                     Entry entry = symbol.getIdentifierTable().addEntry(symbol.getType(), symbol.getId());
                     if (entry == null) {
-                        reportSemanticError();
+                        reportSemanticError(String.format("Repeatedly define variable id %s!", symbol.getId()),
+                                node.childAt(0).getPosition());
                         return false;
                     }
                 }
@@ -815,7 +838,8 @@ public class Whkas {
                     symbol.setTypeId(child0.convert2ArrayType(symbol.getVarType()), child0.getId());
                     StructType.Member member = symbol.getStructType().addMember(symbol.getType(), symbol.getId());
                     if (member == null) {
-                        reportSemanticError();
+                        reportSemanticError(String.format("Repeatedly define struct member id %s!", symbol.getId()),
+                                node.childAt(0).getPosition());
                         return false;
                     }
                 } else if (node.getSymbol() instanceof S_DefSingleVar) {
@@ -824,7 +848,8 @@ public class Whkas {
                     symbol.setTypeId(child0.convert2ArrayType(symbol.getVarType()), child0.getId());
                     Entry entry = symbol.getIdentifierTable().addEntry(symbol.getType(), symbol.getId());
                     if (entry == null) {
-                        reportSemanticError();
+                        reportSemanticError(String.format("Repeatedly define variable id %s!", symbol.getId()),
+                                node.childAt(0).getPosition());
                         return false;
                     }
                 }
@@ -837,7 +862,8 @@ public class Whkas {
                     String id = child1.getId();
                     symbol.setTypeId(type, id);
                     if (symbol.getStructType().addMember(type, id) == null) {
-                        reportSemanticError();
+                        reportSemanticError(String.format("Repeatedly define struct member id %s!", id),
+                                node.childAt(1).getPosition());
                         return false;
                     }
                 } else if (node.getSymbol() instanceof S_DefSingleVar) {
@@ -848,7 +874,8 @@ public class Whkas {
                     symbol.setTypeId(type, id);
                     Entry entry = symbol.getIdentifierTable().addEntry(symbol.getType(), symbol.getId());
                     if (entry == null) {
-                        reportSemanticError();
+                        reportSemanticError(String.format("Repeatedly define variable id %s!", symbol.getId()),
+                                node.childAt(0).getPosition());
                         return false;
                     }
                 }
@@ -858,7 +885,7 @@ public class Whkas {
                 S_ExpL expL = (S_ExpL) node.childAt(0).getSymbol();
                 S_ExpR expR = (S_ExpR) node.childAt(2).getSymbol();
                 if (!expR.isArithmetic()) {
-                    reportSemanticError("Assign right value not match!");
+                    reportSemanticError("Assign right value not match!", node.childAt(1).getPosition());
                     return false;
                 }
                 S_ExpR_Ari expR_ari = (S_ExpR_Ari) expR;
@@ -873,7 +900,9 @@ public class Whkas {
                 StructType structType = symbol.getStructType();
                 structType.setStructName(node.childAt(1).getValue().toString());
                 if (!StructType.addStructType(structType)) {
-                    reportSemanticError();
+                    reportSemanticError(String.format("Repeatedly define struct name id %s!",
+                            structType.getStructName()),
+                            node.childAt(1).getPosition());
                     return false;
                 }
                 break;
@@ -889,9 +918,11 @@ public class Whkas {
             {
                 S_AnyStatement symbol = (S_AnyStatement) node.getSymbol();
                 S_ExpR child1 = (S_ExpR) node.childAt(1).getSymbol();
-                if (!child1.isArithmetic() || !child1.getType().equals(symbol.getIdentifierTable().getReturnType())) {
+                if (!child1.isArithmetic() ||
+                        !((S_ExpR_Ari) child1).getType().equals(symbol.getIdentifierTable().getReturnType())) {
                     reportSemanticError(String.format("Return type not match! Expected: %s, given: %s",
-                            symbol.getIdentifierTable().getReturnType(), child1.getType()));
+                            symbol.getIdentifierTable().getReturnType(), ((S_ExpR_Ari) child1).getType()),
+                            node.childAt(1).getPosition());
                     return false;
                 }
                 S_ExpR_Ari child1_ari = (S_ExpR_Ari) child1;
@@ -904,23 +935,38 @@ public class Whkas {
                 S_ExpR child2 = (S_ExpR) node.childAt(2).getSymbol();
                 S_FuncParamCallList child3 = (S_FuncParamCallList) node.childAt(3).getSymbol();
                 if (!child2.isArithmetic()) {
-                    reportSemanticError("Arg for function call should be arithmetic value!");
+                    reportSemanticError("Arg for function call should be arithmetic value!",
+                            node.childAt(2).getPosition());
                     return false;
                 }
                 S_ExpR_Ari child2_ari = (S_ExpR_Ari) child2;
                 String functionId = node.childAt(0).getValue().toString();
                 Entry entry = symbol.getIdentifierTable().getEntryById(functionId);
                 if (entry == null || entry.getType().getTypeName() != Type.TypeName.FUNCTION) {
-                    reportSemanticError(String.format("Call undefined function %s", functionId));
+                    reportSemanticError(String.format("Call undefined function %s", functionId),
+                            node.childAt(0).getPosition());
                     return false;
                 }
-                symbol.addParam(child2_ari.getRegId());
-                symbol.addParamList(child3.getParamRegList());
+                FunctionType functionType = (FunctionType) entry.getType();
+                symbol.addParam(child2_ari.getType(), child2_ari.getRegId());
+                symbol.addParamList(child3.getParamTypeList(), child3.getParamRegList());
+                List<Type> funcParamDefTypeList = functionType.getParamTypeList();
+                for (int i = 0; i < funcParamDefTypeList.size(); i++) {
+                    Type expected = funcParamDefTypeList.get(i);
+                    Type given = symbol.getParamTypeList().get(i);
+                    if (!expected.equals(given)) {
+                        reportSemanticError(String.format(
+                                "Call for function %s, type not match at param %d. Expected %s, given %s",
+                                functionId, i, expected, given),
+                                node.getPosition());
+                        return false;
+                    }
+                }
                 List<Integer> regIdList = symbol.getParamRegList();
                 for (int regId : regIdList) {
                     Manager.addTetrad("param", Manager.reg2String(regId), "/#/", "/#/");
                 }
-                int regId = symbol.getRegId();
+                int regId = symbol.getRetRegId();
                 Manager.addTetrad("call", functionId, "/#/", Manager.reg2String(regId));
                 break;
             }
@@ -930,7 +976,8 @@ public class Whkas {
                 String functionId = node.childAt(0).getValue().toString();
                 Entry entry = symbol.getIdentifierTable().getEntryById(functionId);
                 if (entry == null || entry.getType().getTypeName() != Type.TypeName.FUNCTION) {
-                    reportSemanticError(String.format("Call undefined function %s", functionId));
+                    reportSemanticError(String.format("Call undefined function %s", functionId),
+                            node.childAt(0).getPosition());
                     return false;
                 }
                 Manager.addTetrad("call", "/#/", "/#/", functionId);
@@ -942,12 +989,13 @@ public class Whkas {
                 S_ExpR child1 = (S_ExpR) node.childAt(1).getSymbol();
                 S_FuncParamCallList child2 = (S_FuncParamCallList) node.childAt(2).getSymbol();
                 if (!child1.isArithmetic()) {
-                    reportSemanticError("Arg for function call should be arithmetic value!");
+                    reportSemanticError("Arg for function call should be arithmetic value!",
+                            node.childAt(1).getPosition());
                     return false;
                 }
                 S_ExpR_Ari child0_ari = (S_ExpR_Ari) child1;
-                symbol.addParam(child0_ari.getRegId());
-                symbol.addParamList(child2.getParamRegList());
+                symbol.addParam(child0_ari.getType(), child0_ari.getRegId());
+                symbol.addParamList(child2.getParamTypeList(), child2.getParamRegList());
                 break;
             }
             case 82:   // SEND_FUNC_ARGS -> %empty
@@ -978,9 +1026,11 @@ public class Whkas {
             case 88:   // SINGLE_RECV_FUNC_ARG -> FUNC_DEF_TYPE RECV_HD_ARRAY
                 break;
             case 91:   // DT_STRUCT -> STRUCT ID
-                StructType structType = StructType.getStructTypeByName(node.childAt(1).getValue().toString());
+                String id = node.childAt(1).getValue().toString();
+                StructType structType = StructType.getStructTypeByName(id);
                 if (structType == null) {
-                    reportSemanticError();
+                    reportSemanticError(String.format("Use undefined struct name id %s!", id),
+                            node.childAt(1).getPosition());
                     return false;
                 }
                 node.setSymbol(new S_AnyType(structType));
@@ -1013,13 +1063,8 @@ public class Whkas {
         return true;
     }
 
-    public void reportSemanticError(String msg) {
-        System.err.println(msg);
-    }
-
-    public void reportSemanticError() {
-        System.err.println("nmsl!");
-        throw new RuntimeException();
+    public void reportSemanticError(String msg, Position position) {
+        System.err.printf("Semantic error at position %s: %s\n", position, msg);
     }
 
     public boolean generateIntermediateCode(ASTreeNode node) {

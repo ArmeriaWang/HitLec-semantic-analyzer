@@ -12,7 +12,7 @@ public class S_ExpR_Ari extends S_ExpR implements Symbol, HasIdTable {
     private Number value = null;  // S
 
     public S_ExpR_Ari(IdentifierTable identifierTable) {
-        super(identifierTable, new IntegerType());
+        super(identifierTable, false);
         this.regId = -1;
     }
 

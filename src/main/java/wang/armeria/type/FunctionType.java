@@ -5,31 +5,31 @@ import java.util.List;
 
 public class FunctionType extends Type {
 
-    private final List<Type> paramList;
+    private final List<Type> paramTypeList;
     private final Type returnType;
     private final static int width = 4;
 
-    public FunctionType(List<Type> paramList, Type returnType) {
+    public FunctionType(List<Type> paramTypeList, Type returnType) {
         super(TypeName.FUNCTION);
-        this.paramList = paramList;
+        this.paramTypeList = paramTypeList;
         this.returnType = returnType;
     }
 
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder();
-        for (Type type : paramList) {
+        for (Type type : paramTypeList) {
             builder.append(type).append("*");
         }
-        if (paramList.size() > 0) {
+        if (paramTypeList.size() > 0) {
             builder.deleteCharAt(builder.length() - 1);
         }
         builder.append("->").append(returnType);
         return builder.toString();
     }
 
-    public List<Type> getParamList() {
-        return new ArrayList<>(paramList);
+    public List<Type> getParamTypeList() {
+        return new ArrayList<>(paramTypeList);
     }
 
     public Type getReturnType() {

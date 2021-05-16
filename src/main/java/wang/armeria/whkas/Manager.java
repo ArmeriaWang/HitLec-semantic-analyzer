@@ -19,6 +19,9 @@ public class Manager {
         private final Label label;
         private final String target;
 
+        /**
+         * jump
+         */
         public Tetrad(int icLineLabel, String op, String obj1, String obj2, Label label) {
             this.icLineLabel = icLineLabel;
             this.op = op;
@@ -28,6 +31,9 @@ public class Manager {
             this.target = null;
         }
 
+        /**
+         * arithmetic, assign, return, call, param
+         */
         public Tetrad(int icLineLabel, String op, String obj1, String obj2, String target) {
             this.icLineLabel = icLineLabel;
             this.op = op;
@@ -39,12 +45,35 @@ public class Manager {
 
         @Override
         public String toString() {
-            if (target == null) {
-                return String.format("%-3d:\t( %-15s, %-15s, %-15s, %-15s )", icLineLabel, op, obj1, obj2, label);
+            String s1, s2;
+            if (label != null) {
+                s1 = String.format("%-3d:\t( %-15s, %-15s, %-15s, %-15s )", icLineLabel, op, obj1, obj2, label);
+                if (op.equals("j")) {
+                    s2 = String.format("goto %s", label);
+                } else if (op.startsWith("j")) {
+                    s2 = String.format("if %s %s %s goto %s", obj1, op.substring(1), obj2, label);
+                } else {
+                    s2 = "unknown code";
+                }
             }
-            else {
-                return String.format("%-3d:\t( %-15s, %-15s, %-15s, %-15s )", icLineLabel, op, obj1, obj2, target);
+            else {  // target != null
+                assert target != null;
+                s1 = String.format("%-3d:\t( %-15s, %-15s, %-15s, %-15s )", icLineLabel, op, obj1, obj2, target);
+                if (op.equals("=")) {
+                    s2 = String.format("%s = %s", obj1, target);
+                } else if (op.equals("ret")) {
+                    s2 = String.format("ret %s", target.equals("/#/") ? "" : target);
+                } else if (op.equals("call")) {
+                    s2 = String.format("call %s", obj1);
+                } else if (op.equals("param")) {
+                    s2 = String.format("param %s", obj1);
+                } else if (op.length() == 1 && "+-*/%".contains(op)) {
+                    s2 = String.format("%s = %s %s %s", target, obj1, op, obj2);
+                } else {
+                    s2 = "unknown code";
+                }
             }
+            return s1 + "            " + s2;
         }
     }
 

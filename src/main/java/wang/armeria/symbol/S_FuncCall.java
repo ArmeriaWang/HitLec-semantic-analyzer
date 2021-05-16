@@ -1,5 +1,6 @@
 package wang.armeria.symbol;
 
+import wang.armeria.type.Type;
 import wang.armeria.whkas.IdentifierTable;
 import wang.armeria.whkas.Manager;
 
@@ -9,26 +10,34 @@ import java.util.List;
 public class S_FuncCall extends S_AnyStatement{
 
     private final List<Integer> paramRegList;
-    private int regId;
+    private final List<Type> paramTypeList;
+    private int retRegId;
 
     public S_FuncCall(IdentifierTable identifierTable) {
         super(identifierTable);
         paramRegList = new ArrayList<>();
-        regId = -1;
+        paramTypeList = new ArrayList<>();
+        retRegId = -1;
     }
 
-    public int getRegId() {
-        if (regId == -1) {
-            regId = Manager.applyForNewReg();
+    public int getRetRegId() {
+        if (retRegId == -1) {
+            retRegId = Manager.applyForNewReg();
         }
-        return regId;
+        return retRegId;
     }
 
-    public void addParam(int regId) {
+    public void addParam(Type type, int regId) {
+        paramTypeList.add(type);
         paramRegList.add(regId);
     }
 
-    public void addParamList(List<Integer> regIdList) {
+    public List<Type> getParamTypeList() {
+        return new ArrayList<>(paramTypeList);
+    }
+
+    public void addParamList(List<Type> typeList, List<Integer> regIdList) {
+        paramTypeList.addAll(typeList);
         paramRegList.addAll(regIdList);
     }
 

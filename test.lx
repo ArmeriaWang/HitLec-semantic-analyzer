@@ -408,34 +408,34 @@
 <37, 6>
 (ROUND_LEFT   ,)
 <37, 10>
-(IDENTIFIER   ,x)
+(CONST_FLOAT  ,1.1)
 <37, 11>
 (COMMA        ,)
-<37, 12>
-(IDENTIFIER   ,arr)
 <37, 14>
+(IDENTIFIER   ,arr)
+<37, 16>
 (SQUARE_LEFT  ,)
-<37, 17>
-(CONST_INTEGER,0)
-<37, 18>
-(SQUARE_RIGHT ,)
 <37, 19>
-(SQUARE_LEFT  ,)
+(CONST_INTEGER,0)
 <37, 20>
-(CONST_INTEGER,0)
+(SQUARE_RIGHT ,)
 <37, 21>
-(SQUARE_RIGHT ,)
-<37, 22>
 (SQUARE_LEFT  ,)
-<37, 23>
+<37, 22>
 (CONST_INTEGER,0)
-<37, 24>
+<37, 23>
 (SQUARE_RIGHT ,)
+<37, 24>
+(SQUARE_LEFT  ,)
 <37, 25>
-(ROUND_RIGHT  ,)
+(CONST_INTEGER,0)
 <37, 26>
-(SEMICOLON    ,)
+(SQUARE_RIGHT ,)
 <37, 27>
+(ROUND_RIGHT  ,)
+<37, 28>
+(SEMICOLON    ,)
+<37, 29>
 (IDENTIFIER   ,node)
 <38, 0>
 (DOT          ,)

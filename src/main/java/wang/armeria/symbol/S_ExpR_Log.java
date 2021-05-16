@@ -10,7 +10,7 @@ public class S_ExpR_Log extends S_ExpR
     private Label goFalse;
 
     public S_ExpR_Log(IdentifierTable identifierTable) {
-        super(identifierTable);
+        super(identifierTable, true);
         goTrue = new Label();
         goFalse = new Label();
     }
