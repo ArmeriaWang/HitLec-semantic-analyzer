@@ -6,6 +6,9 @@ function int plus(int a, int b) {
         x = a - b;
         return a + b + x % 5;
     }
+    if ((a + b < a || a > 233) && !(b != a)) {
+        return plus(b, b - a);
+    }
 }
 struct Data {
     int x;
@@ -28,12 +31,15 @@ function int main()
         i = i + 1;
         int z;
     }
+    int tmp;
+    tmp = (2 + i) * 2 + x / 3;
     int arr[10][20][30];
     arr[4][5][6] = arr[6][5][4];
     struct Car car;
     arr[9][8][7] = car.data[1][2].x;
     struct Node node;
     int res;
+    res = 1.1;
     res = plus(1.1, arr[0][0][0]);
     node.from = 2;
     node.car.weight = 1.1;

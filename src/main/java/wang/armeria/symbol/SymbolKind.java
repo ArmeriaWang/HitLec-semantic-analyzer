@@ -30,7 +30,7 @@ public enum SymbolKind {
     S_ASSIGN(26),                  /* ASSIGN  */
     S_LOR(27),                     /* LOR  */
     S_LAND(28),                    /* LAND  */
-    S_BOR(29),                     /* BOR  */
+    S_LNOT(29),                     /* LNOT  */
     S_BXOR(30),                    /* BXOR  */
     S_APSAND(31),                  /* APSAND  */
     S_EQ(32),                      /* EQ  */
@@ -126,7 +126,7 @@ public enum SymbolKind {
             SymbolKind.S_ASSIGN,
             SymbolKind.S_LOR,
             SymbolKind.S_LAND,
-            SymbolKind.S_BOR,
+            SymbolKind.S_LNOT,
             SymbolKind.S_BXOR,
             SymbolKind.S_APSAND,
             SymbolKind.S_EQ,
@@ -235,7 +235,7 @@ public enum SymbolKind {
                         "FUNCTION", "CONST_INTEGER", "CONST_FLOAT", "CONST_STRING",
                         "CONST_BOOLEAN", "ID", "SEMICOLON", "COMMA", "DOT", "ROUND_LEFT",
                         "ROUND_RIGHT", "SQUARE_LEFT", "SQUARE_RIGHT", "BEGIN", "END", "ASSIGN",
-                        "LOR", "LAND", "BOR", "BXOR", "APSAND", "EQ", "NE", "LE", "GE", "LT",
+                        "LOR", "LAND", "LNOT", "BXOR", "APSAND", "EQ", "NE", "LE", "GE", "LT",
                         "GT", "PLUS", "MINUS", "STAR", "DIVIDE", "MOD", "GET_ADDR", "DEREF",
                         "POSITIVE", "NEGATIVE", "$accept", "PROGRAM", "TOP_STATEMENTS",
                         "STATEMENTS_BLOCK", "STATEMENTS", "STATEMENT", "EXP_R", "EXP_L",

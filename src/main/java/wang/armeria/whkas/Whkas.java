@@ -24,7 +24,7 @@ public class Whkas {
         return fatherSymbol.getStructType();
     }
 
-    private boolean doWithArithmeticExpR(ASTreeNode node, String op) {
+    private boolean doPostWithArithmeticExpR(ASTreeNode node, String op) {
         S_ExpR child0 = (S_ExpR) node.childAt(0).getSymbol();
         S_ExpR child2 = (S_ExpR) node.childAt(2).getSymbol();
         if (!child0.isArithmetic() || !child2.isArithmetic()) {
@@ -116,6 +116,10 @@ public class Whkas {
             S_ExpR_Log fatherSymbol = (S_ExpR_Log) node.getFather().getSymbol();
             symbol.inherentGoTrueLabel(fatherSymbol.getGoTrueLabel());
             symbol.inherentGoFalseLabel(fatherSymbol.getGoFalseLabel());
+        } else if (node.getFather().getProducer() == 53) {
+            // STATEMENT_IF -> IF ROUND_LEFT {?} EXP_R ROUND_RIGHT STATEMENTS_BLOCK STATEMENT_ELSE
+            S_StatementIf fatherSymbol = (S_StatementIf) node.getFather().getSymbol();
+            symbol.inherentGoFalseLabel(fatherSymbol.getNextLabel());
         } else if (node.getFather().getProducer() == 57) {
             // STATEMENT_WHILE: WHILE ROUND_LEFT {?} EXP_R ROUND_RIGHT WHILE_BODY
             S_StatementWhile fatherSymbol = (S_StatementWhile) node.getFather().getSymbol();
@@ -278,6 +282,8 @@ public class Whkas {
                 node.setSymbol(new S_StatementIf(getIdTableOfFather(node)));
                 break;
             case 54:   // STATEMENT_ELSE -> ELSE STATEMENTS_BLOCK
+            case 55:   // STATEMENT_ELSE -> ELSE STATEMENT_IF
+            case 56:   // STATEMENT_ELSE -> %empty
             {
                 S_AnyStatement symbol = new S_AnyStatement(getIdTableOfFather(node));
                 node.setSymbol(symbol);
@@ -285,9 +291,6 @@ public class Whkas {
                 symbol.inherentNextLabel(fatherSymbol.getNextLabel());
                 break;
             }
-            case 55:   // STATEMENT_ELSE -> ELSE STATEMENT_IF
-            case 56:   // STATEMENT_ELSE -> %empty
-                break;
             case 57:   // STATEMENT_WHILE: WHILE ROUND_LEFT EXP_R ROUND_RIGHT WHILE_BODY
                 node.setSymbol(new S_StatementWhile(getIdTableOfFather(node)));
                 break;
@@ -539,7 +542,7 @@ public class Whkas {
             }
             case 24:   // EXP_R -> EXP_R PLUS EXP_R
             {
-                if (!doWithArithmeticExpR(node, "+")) {
+                if (!doPostWithArithmeticExpR(node, "+")) {
                     reportSemanticError("Type not match next to arithmetic op + !",
                             node.childAt(1).getPosition());
                     return false;
@@ -548,7 +551,7 @@ public class Whkas {
             }
             case 25:   // EXP_R -> EXP_R MINUS EXP_R
             {
-                if (!doWithArithmeticExpR(node, "-")) {
+                if (!doPostWithArithmeticExpR(node, "-")) {
                     reportSemanticError("Type not match next to arithmetic op - !",
                             node.childAt(1).getPosition());
                     return false;
@@ -557,7 +560,7 @@ public class Whkas {
             }
             case 26:   // EXP_R -> EXP_R STAR EXP_R
             {
-                if (!doWithArithmeticExpR(node, "*")) {
+                if (!doPostWithArithmeticExpR(node, "*")) {
                     reportSemanticError("Type not match next to arithmetic op * !",
                             node.childAt(1).getPosition());
                     return false;
@@ -566,7 +569,7 @@ public class Whkas {
             }
             case 27:   // EXP_R -> EXP_R DIVIDE EXP_R
             {
-                if (!doWithArithmeticExpR(node, "/")) {
+                if (!doPostWithArithmeticExpR(node, "/")) {
                     reportSemanticError("Type not match next to arithmetic op / !",
                             node.childAt(1).getPosition());
                     return false;
@@ -575,7 +578,7 @@ public class Whkas {
             }
             case 28:   // EXP_R -> EXP_R MOD EXP_R
             {
-                if (!doWithArithmeticExpR(node, "%")) {
+                if (!doPostWithArithmeticExpR(node, "%")) {
                     reportSemanticError("Type not match next to arithmetic op % !",
                             node.childAt(1).getPosition());
                     return false;
@@ -588,9 +591,9 @@ public class Whkas {
                 break;
             case 37:   // EXP_R -> ROUND_LEFT EXP_R ROUND_RIGHT
             {
-                S_ExpR child1 = (S_ExpR) node.getFather().childAt(1).getSymbol();
+                S_ExpR child1 = (S_ExpR) node.childAt(1).getSymbol();
                 if (child1.isArithmetic()) {
-                    S_ExpR_Ari child1_ari = (S_ExpR_Ari) node.getFather().childAt(1).getSymbol();
+                    S_ExpR_Ari child1_ari = (S_ExpR_Ari) node.childAt(1).getSymbol();
                     S_ExpR_Ari symbol_ari = (S_ExpR_Ari) node.getSymbol();
                     node.setSymbol(symbol_ari, true);
                     symbol_ari.setType(child1_ari.getType());
@@ -885,10 +888,25 @@ public class Whkas {
                 S_ExpL expL = (S_ExpL) node.childAt(0).getSymbol();
                 S_ExpR expR = (S_ExpR) node.childAt(2).getSymbol();
                 if (!expR.isArithmetic()) {
-                    reportSemanticError("Assign right value not match!", node.childAt(1).getPosition());
+                    reportSemanticError("On the right of assign symbol there should be an arithmetic value!",
+                            node.childAt(1).getPosition());
                     return false;
                 }
                 S_ExpR_Ari expR_ari = (S_ExpR_Ari) expR;
+                Type type1 = expL.getEntry().getType();
+                Type type2 = expR_ari.getType();
+                if (!type1.equals(type2)) {
+                    boolean notMatch = true;
+                    if (type1.getTypeName() == Type.TypeName.FLOAT && type2.getTypeName() == Type.TypeName.INTEGER) {
+                        notMatch = false;
+                    }
+                    if (notMatch) {
+                        reportSemanticError(
+                                String.format("Assign statement: type not match, left: %s, right: %s", type1, type2),
+                                node.childAt(1).getPosition());
+                        return false;
+                    }
+                }
                 Manager.addTetrad("=", Manager.reg2String(expR_ari.getRegId()), "/#/", expL.getFullRef());
                 S_AnyStatement symbol = (S_AnyStatement) node.getSymbol();
                 symbol.setNextLabel(Manager.nextLabel());

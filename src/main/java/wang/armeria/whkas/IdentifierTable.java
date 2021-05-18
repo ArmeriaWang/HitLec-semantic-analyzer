@@ -100,6 +100,9 @@ public class IdentifierTable {
     }
 
     public MemberRefEntry getStructMemberEntry(Entry structVarEntry, String id) {
+        if (structVarEntry.getType().getTypeName() != Type.TypeName.STRUCT) {
+            return null;
+        }
         StructType structType = (StructType) structVarEntry.getType();
         StructType.Member member = structType.getMemberById(id);
         if (member == null) {
