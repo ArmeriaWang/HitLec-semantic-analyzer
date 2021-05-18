@@ -60,7 +60,7 @@ public class Manager {
                 assert target != null;
                 s1 = String.format("%-3d:\t( %-15s, %-15s, %-15s, %-15s )", icLineLabel, op, obj1, obj2, target);
                 if (op.equals("=")) {
-                    s2 = String.format("%s = %s", obj1, target);
+                    s2 = String.format("%s = %s", target, obj1);
                 } else if (op.equals("ret")) {
                     s2 = String.format("ret %s", target.equals("/#/") ? "" : target);
                 } else if (op.equals("call")) {
@@ -73,7 +73,7 @@ public class Manager {
                     s2 = "unknown code";
                 }
             }
-            return s1 + "            " + s2;
+            return s1 + "\t\t\t" + s2;
         }
     }
 

@@ -39,8 +39,6 @@ function int main()
     arr[9][8][7] = car.data[1][2].x;
     struct Node node;
     int res;
-    res = 1.1;
-    res = plus(1.1, arr[0][0][0]);
+    res = plus(1, arr[0][0][0]);
     node.from = 2;
-    node.car.weight = 1.1;
 }
