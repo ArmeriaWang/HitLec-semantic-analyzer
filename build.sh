@@ -1,6 +1,6 @@
 generate=0
 build=0
-while getopts "bg" arg; do
+while getopts "b:g:" arg; do
     case $arg in
     g)
         generate=$OPTARG
